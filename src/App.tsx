@@ -218,6 +218,13 @@ export default function App() {
   const [editingRecipeItemId, setEditingRecipeItemId] = useState<string | null>(null);
   const [editingRecipeItemQty, setEditingRecipeItemQty] = useState<number>(0);
 
+  // Edit Calc Ingredient State (modal da engrenagem)
+  const [editingIngredientId, setEditingIngredientId] = useState<string | null>(null);
+  const [editIngName, setEditIngName] = useState<string>('');
+  const [editIngUnit, setEditIngUnit] = useState<'kg' | 'unit'>('kg');
+  const [editIngPrice, setEditIngPrice] = useState<number>(0);
+
+
   // Persist products
   useEffect(() => {
     localStorage.setItem('casa-da-batata-products', JSON.stringify(products));
