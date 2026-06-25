@@ -170,15 +170,9 @@ export default function App() {
   const [imageMethod, setImageMethod] = useState<'upload' | 'url'>('upload');
 
   // Estados de Bairros e Taxas de Entrega
+  // Sempre reseta os bairros para INITIAL_NEIGHBORHOODS (Paragominas-PA)
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>(() => {
-    const saved = localStorage.getItem('casa-da-batata-neighborhoods');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return INITIAL_NEIGHBORHOODS;
-      }
-    }
+    localStorage.removeItem('casa-da-batata-neighborhoods');
     return INITIAL_NEIGHBORHOODS;
   });
   const [adminTab, setAdminTab] = useState<'products' | 'delivery' | 'calculator' | 'toppings'>('products');
