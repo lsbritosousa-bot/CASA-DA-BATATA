@@ -77,7 +77,7 @@ const INITIAL_CALC_INGREDIENTS: CalcIngredient[] = [
   { id: '4', name: 'Embalagem Padrão', unit: 'unit', costPrice: 1.80 }
 ];
 
-type View = 'menu' | 'cart' | 'admin' | 'coupons';
+type View = 'menu' | 'cart' | 'admin';
 
 // --- Initial Data ---
 const INITIAL_NEIGHBORHOODS: Neighborhood[] = [
@@ -878,7 +878,7 @@ export default function App() {
     <nav className="fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-zinc-800 py-2 px-6 flex justify-between items-center z-50 lg:max-w-md lg:mx-auto lg:rounded-t-3xl lg:shadow-2xl">
       <NavItem icon={MenuIcon} label="Menu" active={currentView === 'menu'} onClick={() => setCurrentView('menu')} />
       <NavItem icon={ShoppingCart} label="Carrinho" active={currentView === 'cart'} onClick={() => setCurrentView('cart')} hasBadge={totalItems > 0} badge={totalItems} />
-      <NavItem icon={Ticket} label="Cupons" active={currentView === 'coupons'} onClick={() => setCurrentView('coupons')} />
+      
     </nav>
   );
 
@@ -1215,37 +1215,6 @@ export default function App() {
             </motion.div>
           )}
 
-          {currentView === 'coupons' && (
-            <motion.div 
-              key="coupons"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="px-4 py-8"
-            >
-              <h2 className="text-2xl font-bold mb-6 text-zinc-100">Cupons Disponíveis</h2>
-              <div className="space-y-4">
-                {[
-                  { code: 'PRIMEIRACOMPRA', desc: 'R$ 10 de desconto no seu primeiro pedido.', val: '10.00' },
-                  { code: 'BATATALOVER', desc: '5% de desconto em pedidos acima de R$ 50.', val: '5%' }
-                ].map(coupon => (
-                  <div key={coupon.code} className="bg-zinc-900/80 backdrop-blur-md border-2 border-dashed border-orange-500/30 rounded-2xl p-6 relative overflow-hidden">
-                    <div className="absolute -top-4 -right-4 w-12 h-12 bg-zinc-950 rounded-full" />
-                    <div className="absolute -bottom-4 -left-4 w-12 h-12 bg-zinc-950 rounded-full" />
-                    
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="bg-zinc-100 text-zinc-950 text-[10px] font-bold px-2 py-1 rounded">ATIVO</span>
-                      <span className="text-orange-500 font-black text-xl">{coupon.val} OFF</span>
-                    </div>
-                    <h4 className="font-bold text-lg mb-1 text-zinc-100">{coupon.code}</h4>
-                    <p className="text-zinc-400 text-sm">{coupon.desc}</p>
-                    <button className="mt-4 w-full bg-zinc-950 hover:bg-zinc-900 text-zinc-200 font-bold py-2 rounded-lg text-sm transition-colors cursor-pointer">
-                      COPIAR CÓDIGO
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
 
           {currentView === 'admin' && (
             <motion.div 
@@ -1815,7 +1784,7 @@ export default function App() {
                             : ing.costPrice * item.quantity;
                           return sum + itemCost;
                         }, 0);
-                        
+
                         const marginPercent = calcMargin / 100;
                         const suggestedPrice = marginPercent < 1 ? totalUnitCost / (1 - marginPercent) : totalUnitCost;
                         const grossProfit = suggestedPrice - totalUnitCost;
@@ -1824,7 +1793,7 @@ export default function App() {
                         return (
                           <div className="bg-zinc-900/80 backdrop-blur-md p-6 rounded-3xl border border-zinc-800 space-y-4">
                             <h3 className="font-bold text-zinc-100 text-lg border-b border-zinc-800 pb-2 mb-3">3. Resultados da Precificação</h3>
-                            
+
                             <div className="grid grid-cols-2 gap-4">
                               <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800/80">
                                 <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Custo Unitário Total</span>
@@ -1832,7 +1801,7 @@ export default function App() {
                               </div>
                               <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800/80 flex flex-col justify-between">
                                 <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">Margem de Lucro (%)</span>
-                                <input 
+                                <input
                                   type="number"
                                   min="0"
                                   max="99"
