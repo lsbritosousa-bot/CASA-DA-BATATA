@@ -1544,17 +1544,35 @@ export default function App() {
                                               </>
                                             ) : (
                                               <>
-                                                <button
-                                                  type="button"
-                                                  onClick={() => {
-                                                    setEditingRecipeItemId(item.ingredientId);
-                                                    setEditingRecipeItemQty(item.quantity);
-                                                  }}
-                                                  className="text-zinc-500 hover:text-orange-500 transition-colors p-1 cursor-pointer"
-                                                  title="Editar Quantidade"
-                                                >
-                                                  <Edit2 size={14} />
-                                                </button>
+                                                <div className="flex gap-1">
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                      setEditingRecipeItemId(item.ingredientId);
+                                                      setEditingRecipeItemQty(item.quantity);
+                                                    }}
+                                                    className="text-zinc-500 hover:text-orange-500 transition-colors p-1 cursor-pointer"
+                                                    title="Editar Quantidade"
+                                                  >
+                                                    <Edit2 size={14} />
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                      const ing = calcIngredients.find(i => i.id === item.ingredientId);
+                                                      if (ing) {
+                                                        setEditIngName(ing.name);
+                                                        setEditIngUnit(ing.unit as any);
+                                                        setEditIngPrice(ing.costPrice);
+                                                        setEditingIngredientId(item.ingredientId);
+                                                      }
+                                                    }}
+                                                    className="text-zinc-500 hover:text-orange-500 transition-colors p-1 cursor-pointer"
+                                                    title="Editar Ingrediente"
+                                                  >
+                                                    <Settings size={14} />
+                                                  </button>
+                                                </div>
                                                 <button
                                                   type="button"
                                                   onClick={() => handleDeleteRecipeItem(item.ingredientId)}
