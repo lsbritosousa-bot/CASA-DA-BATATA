@@ -1056,14 +1056,24 @@ export default function App() {
                       <span>Subtotal</span>
                       <span>R$ {subtotal.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-zinc-400 text-sm font-medium">
-                      <span>Entrega</span>
-                      <span>{selectedNeighborhoodId ? `R$ ${deliveryFee.toFixed(2)}` : 'A definir'}</span>
+                    <div className="flex justify-between text-sm font-medium">
+                      <span className="text-zinc-400">Entrega</span>
+                      <span className={selectedNeighborhoodId ? (deliveryFee === 0 ? 'text-emerald-400 font-bold' : 'text-zinc-300 font-bold') : 'text-zinc-500 italic'}>
+                        {selectedNeighborhoodId
+                          ? (deliveryFee === 0 ? 'Grátis 🎉' : `+ R$ ${deliveryFee.toFixed(2)}`)
+                          : 'Selecione o bairro'}
+                      </span>
                     </div>
                     <div className="pt-3 border-t border-zinc-800 flex justify-between items-center">
                       <span className="font-bold text-lg text-zinc-100">Total</span>
-                      <span className="font-black text-2xl text-orange-500">R$ {orderTotal.toFixed(2)}</span>
+                      <div className="text-right">
+                        <span className="font-black text-2xl text-orange-500">R$ {orderTotal.toFixed(2)}</span>
+                        {selectedNeighborhoodId && deliveryFee > 0 && (
+                          <p className="text-[10px] text-zinc-500 mt-0.5">Inclui R$ {deliveryFee.toFixed(2)} de entrega</p>
+                        )}
+                      </div>
                     </div>
+
                     
                     <button 
                       onClick={handleSendWhatsApp}
