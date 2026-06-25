@@ -81,10 +81,26 @@ type View = 'menu' | 'cart' | 'admin';
 
 // --- Initial Data ---
 const INITIAL_NEIGHBORHOODS: Neighborhood[] = [
-  { id: '1', name: 'Centro', deliveryFee: 5.00 },
-  { id: '2', name: 'Cidade Nova', deliveryFee: 7.00 },
-  { id: '3', name: 'Nova Marabá', deliveryFee: 8.00 },
-  { id: '4', name: 'São Félix', deliveryFee: 12.00 }
+  { id: '1', name: 'Açaizal', deliveryFee: 8.00 },
+  { id: '2', name: 'Alto do Vale', deliveryFee: 8.00 },
+  { id: '3', name: 'Andradina', deliveryFee: 8.00 },
+  { id: '4', name: 'Angelim', deliveryFee: 8.00 },
+  { id: '5', name: 'Camboatã', deliveryFee: 8.00 },
+  { id: '6', name: 'Célio Miranda', deliveryFee: 8.00 },
+  { id: '7', name: 'Inocêncio Oliveira', deliveryFee: 8.00 },
+  { id: '8', name: 'Jardim Atlântico', deliveryFee: 8.00 },
+  { id: '9', name: 'Juparanã', deliveryFee: 8.00 },
+  { id: '10', name: 'Manoel Nahor de Lima', deliveryFee: 8.00 },
+  { id: '11', name: 'Nagib Demachki', deliveryFee: 8.00 },
+  { id: '12', name: 'Nova Conquista', deliveryFee: 8.00 },
+  { id: '13', name: 'Ouro Preto', deliveryFee: 8.00 },
+  { id: '14', name: 'Ouro Verde', deliveryFee: 8.00 },
+  { id: '15', name: 'Presidente Juscelino Kubitschek', deliveryFee: 8.00 },
+  { id: '16', name: 'Promissão', deliveryFee: 8.00 },
+  { id: '17', name: 'Sol Nascente', deliveryFee: 8.00 },
+  { id: '18', name: 'Tião Mineiro', deliveryFee: 8.00 },
+  { id: '19', name: 'Tropical', deliveryFee: 8.00 },
+  { id: '20', name: 'Uraim', deliveryFee: 8.00 },
 ];
 
 const INITIAL_PRODUCTS: Product[] = [
