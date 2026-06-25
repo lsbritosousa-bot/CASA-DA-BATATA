@@ -101,7 +101,7 @@ const INITIAL_NEIGHBORHOODS: Neighborhood[] = [
   { id: '18', name: 'Tião Mineiro', deliveryFee: 8.00 },
   { id: '19', name: 'Tropical', deliveryFee: 8.00 },
   { id: '20', name: 'Uraim', deliveryFee: 8.00 },
-];
+]; // Updated neighborhoods list for Paragominas
 
 const INITIAL_PRODUCTS: Product[] = [
   {
