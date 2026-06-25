@@ -1498,22 +1498,41 @@ export default function App() {
                                         </td>
                                         <td className="p-3 text-zinc-200 font-medium">
                                           {editingRecipeItemId === item.ingredientId ? (
-                                            <div className="flex items-center gap-1">
+                                            <div className="flex items-center gap-1.5">
                                               <input
                                                 type="number"
                                                 min="1"
+                                                autoFocus
                                                 value={editingRecipeItemQty}
                                                 onChange={(e) => setEditingRecipeItemQty(parseInt(e.target.value) || 0)}
-                                                className="w-16 px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-100 text-xs focus:ring-1 focus:ring-orange-500 outline-none"
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter' && editingRecipeItemQty > 0) {
+                                                    setCurrentRecipe(prev => prev.map(ri => ri.ingredientId === item.ingredientId ? { ...ri, quantity: editingRecipeItemQty } : ri));
+                                                    setEditingRecipeItemId(null);
+                                                  }
+                                                  if (e.key === 'Escape') setEditingRecipeItemId(null);
+                                                }}
+                                                className="w-20 px-2 py-1 rounded-lg bg-zinc-950 border-2 border-orange-500 text-orange-400 font-bold text-sm focus:ring-2 focus:ring-orange-500/50 outline-none"
                                               />
-                                              <span className="text-[10px] text-zinc-400">
+                                              <span className="text-xs text-zinc-400 font-medium">
                                                 {ing.unit === 'kg' ? 'g' : 'un'}
                                               </span>
                                             </div>
                                           ) : (
-                                            <>
-                                              {item.quantity} {ing.unit === 'kg' ? 'g' : 'un'}
-                                            </>
+                                            <button
+                                              type="button"
+                                              title="Clique para editar a quantidade"
+                                              onClick={() => {
+                                                setEditingRecipeItemId(item.ingredientId);
+                                                setEditingRecipeItemQty(item.quantity);
+                                              }}
+                                              className="flex items-center gap-1.5 group cursor-pointer"
+                                            >
+                                              <span className="text-zinc-200 font-bold group-hover:text-orange-400 transition-colors">
+                                                {item.quantity} {ing.unit === 'kg' ? 'g' : 'un'}
+                                              </span>
+                                              <Edit2 size={11} className="text-zinc-600 group-hover:text-orange-500 transition-colors" />
+                                            </button>
                                           )}
                                         </td>
                                         <td className="p-3 text-orange-500 font-bold">R$ {itemCost.toFixed(2)}</td>
@@ -1528,56 +1547,43 @@ export default function App() {
                                                     setCurrentRecipe(prev => prev.map(ri => ri.ingredientId === item.ingredientId ? { ...ri, quantity: editingRecipeItemQty } : ri));
                                                     setEditingRecipeItemId(null);
                                                   }}
-                                                  className="p-1 hover:bg-zinc-900 rounded transition-colors cursor-pointer"
-                                                  title="Confirmar"
+                                                  className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                                                  title="Salvar quantidade"
                                                 >
-                                                  <Check size={14} className="text-emerald-500" />
+                                                  <Check size={12} /> Salvar
                                                 </button>
                                                 <button
                                                   type="button"
                                                   onClick={() => setEditingRecipeItemId(null)}
-                                                  className="p-1 hover:bg-zinc-900 rounded transition-colors cursor-pointer"
+                                                  className="flex items-center gap-1 px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs font-bold transition-colors cursor-pointer"
                                                   title="Cancelar"
                                                 >
-                                                  <X size={14} className="text-red-400" />
+                                                  <X size={12} /> Cancelar
                                                 </button>
                                               </>
                                             ) : (
                                               <>
-                                                <div className="flex gap-1">
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                      setEditingRecipeItemId(item.ingredientId);
-                                                      setEditingRecipeItemQty(item.quantity);
-                                                    }}
-                                                    className="text-zinc-500 hover:text-orange-500 transition-colors p-1 cursor-pointer"
-                                                    title="Editar Quantidade"
-                                                  >
-                                                    <Edit2 size={14} />
-                                                  </button>
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                      const ing = calcIngredients.find(i => i.id === item.ingredientId);
-                                                      if (ing) {
-                                                        setEditIngName(ing.name);
-                                                        setEditIngUnit(ing.unit as any);
-                                                        setEditIngPrice(ing.costPrice);
-                                                        setEditingIngredientId(item.ingredientId);
-                                                      }
-                                                    }}
-                                                    className="text-zinc-500 hover:text-orange-500 transition-colors p-1 cursor-pointer"
-                                                    title="Editar Ingrediente"
-                                                  >
-                                                    <Settings size={14} />
-                                                  </button>
-                                                </div>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    const ing = calcIngredients.find(i => i.id === item.ingredientId);
+                                                    if (ing) {
+                                                      setEditIngName(ing.name);
+                                                      setEditIngUnit(ing.unit as any);
+                                                      setEditIngPrice(ing.costPrice);
+                                                      setEditingIngredientId(item.ingredientId);
+                                                    }
+                                                  }}
+                                                  className="text-zinc-500 hover:text-orange-500 transition-colors p-1 cursor-pointer"
+                                                  title="Editar Insumo (nome, preço)"
+                                                >
+                                                  <Settings size={14} />
+                                                </button>
                                                 <button
                                                   type="button"
                                                   onClick={() => handleDeleteRecipeItem(item.ingredientId)}
                                                   className="text-zinc-500 hover:text-red-500 transition-colors p-1 cursor-pointer"
-                                                  title="Excluir"
+                                                  title="Remover da receita"
                                                 >
                                                   <Trash2 size={14} />
                                                 </button>
