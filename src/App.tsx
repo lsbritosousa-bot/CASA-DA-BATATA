@@ -38,7 +38,19 @@ interface Product {
 
 interface CartItem extends Product {
   quantity: number;
+  selectedTopping?: string;
 }
+
+interface Topping {
+  id: string;
+  name: string;
+}
+
+const INITIAL_TOPPINGS: Topping[] = [
+  { id: '1', name: 'Cheddar' },
+  { id: '2', name: 'Requeijão' },
+  { id: '3', name: 'Catupiry' }
+];
 
 interface Neighborhood {
   id: string;
@@ -153,9 +165,24 @@ export default function App() {
     }
     return INITIAL_NEIGHBORHOODS;
   });
-  const [adminTab, setAdminTab] = useState<'products' | 'delivery' | 'calculator'>('products');
+  const [adminTab, setAdminTab] = useState<'products' | 'delivery' | 'calculator' | 'toppings'>('products');
   const [newNeighborhoodName, setNewNeighborhoodName] = useState('');
   const [newNeighborhoodFee, setNewNeighborhoodFee] = useState(0);
+
+  const [toppings, setToppings] = useState<Topping[]>(() => {
+    const saved = localStorage.getItem('casa-da-batata-toppings');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return INITIAL_TOPPINGS;
+      }
+    }
+    return INITIAL_TOPPINGS;
+  });
+  const [newToppingName, setNewToppingName] = useState('');
+  const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null);
+  const [selectedTopping, setSelectedTopping] = useState<string>('');
 
   // Estados da Calculadora de Precificação
   // Estados da Calculadora de Precificação (Ficha Técnica)
@@ -218,11 +245,7 @@ export default function App() {
   const [editingRecipeItemId, setEditingRecipeItemId] = useState<string | null>(null);
   const [editingRecipeItemQty, setEditingRecipeItemQty] = useState<number>(0);
 
-  // Edit Calc Ingredient State (modal da engrenagem)
-  const [editingIngredientId, setEditingIngredientId] = useState<string | null>(null);
-  const [editIngName, setEditIngName] = useState<string>('');
-  const [editIngUnit, setEditIngUnit] = useState<'kg' | 'unit'>('kg');
-  const [editIngPrice, setEditIngPrice] = useState<number>(0);
+
 
 
   // Persist products
@@ -239,6 +262,11 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('casa-da-batata-calc-ingredients', JSON.stringify(calcIngredients));
   }, [calcIngredients]);
+
+  // Persist coberturas
+  useEffect(() => {
+    localStorage.setItem('casa-da-batata-toppings', JSON.stringify(toppings));
+  }, [toppings]);
 
   // Carregar dados do Supabase na montagem e realizar auto-seed se o banco estiver vazio
   useEffect(() => {
@@ -259,6 +287,18 @@ export default function App() {
         let dbProducts = productsRes.data || [];
         let dbNeighborhoods = neighborhoodsRes.data || [];
         let dbIngredients = ingredientsRes.data || [];
+        let dbToppings = [];
+
+        try {
+          const toppingsRes = await supabase.from('toppings').select('*');
+          if (!toppingsRes.error) {
+            dbToppings = toppingsRes.data || [];
+          } else {
+            console.warn('Erro ao carregar coberturas do Supabase:', toppingsRes.error);
+          }
+        } catch (e) {
+          console.warn('Erro ao conectar na tabela toppings do Supabase. Ignorando e usando LocalStorage.', e);
+        }
 
         // Auto-seed se o banco de dados estiver vazio mas tivermos dados locais
         if (dbProducts.length === 0 && products.length > 0) {
@@ -312,6 +352,24 @@ export default function App() {
           dbIngredients = toInsert;
         }
 
+        if (dbToppings.length === 0 && toppings.length > 0) {
+          const toInsert = toppings.map(t => ({
+            id: t.id,
+            name: t.name
+          }));
+          try {
+            const { error } = await supabase.from('toppings').insert(toInsert);
+            if (!error) {
+              console.log('Coberturas sincronizadas com o Supabase');
+            } else {
+              console.error('Erro ao sincronizar coberturas:', error);
+            }
+          } catch (e) {
+            console.warn('Erro ao salvar coberturas no Supabase:', e);
+          }
+          dbToppings = toInsert;
+        }
+
         // Mapear dados do banco para os tipos locais (camelCase)
         const mappedProducts: Product[] = dbProducts.map((p: any) => ({
           id: p.id,
@@ -337,9 +395,15 @@ export default function App() {
           costPrice: Number(ing.cost_price)
         }));
 
+        const mappedToppings: Topping[] = dbToppings.map((t: any) => ({
+          id: t.id,
+          name: t.name
+        }));
+
         setProducts(mappedProducts);
         setNeighborhoods(mappedNeighborhoods);
         setCalcIngredients(mappedIngredients);
+        setToppings(mappedToppings);
       } catch (err) {
         console.error('Falha ao carregar dados do Supabase, utilizando cache local:', err);
       }
@@ -363,28 +427,83 @@ export default function App() {
   }, []);
 
   // --- Handlers ---
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, topping?: string) => {
     setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
+      const existing = prev.find(item => item.id === product.id && item.selectedTopping === topping);
       if (existing) {
-        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+        return prev.map(item => (item.id === product.id && item.selectedTopping === topping) 
+          ? { ...item, quantity: item.quantity + 1 } 
+          : item
+        );
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prev, { ...product, quantity: 1, selectedTopping: topping }];
     });
   };
 
-  const removeFromCart = (id: string) => {
-    setCart(prev => prev.filter(item => item.id !== id));
+  const removeFromCart = (id: string, topping?: string) => {
+    setCart(prev => prev.filter(item => !(item.id === id && item.selectedTopping === topping)));
   };
 
-  const updateQuantity = (id: string, delta: number) => {
+  const updateQuantity = (id: string, delta: number, topping?: string) => {
     setCart(prev => prev.map(item => {
-      if (item.id === id) {
+      if (item.id === id && item.selectedTopping === topping) {
         const newQty = Math.max(1, item.quantity + delta);
         return { ...item, quantity: newQty };
       }
       return item;
     }));
+  };
+
+  const handleAddButtonClick = (product: Product) => {
+    if (product.category === 'batatas') {
+      setCustomizingProduct(product);
+      if (toppings.length > 0) {
+        setSelectedTopping(toppings[0].name);
+      } else {
+        setSelectedTopping('');
+      }
+    } else {
+      addToCart(product);
+    }
+  };
+
+  const handleAddTopping = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newToppingName.trim()) return;
+
+    const newTopping: Topping = {
+      id: Date.now().toString(),
+      name: newToppingName.trim()
+    };
+
+    setToppings(prev => [...prev, newTopping]);
+    setNewToppingName('');
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('toppings').insert({
+          id: newTopping.id,
+          name: newTopping.name
+        });
+        if (error) console.error('Erro ao salvar no Supabase:', error);
+      } catch (e) {
+        console.warn('Erro ao salvar no Supabase. Usando LocalStorage.', e);
+      }
+    }
+  };
+
+  const handleDeleteTopping = async (id: string) => {
+    if (window.confirm('Tem certeza que deseja excluir esta cobertura?')) {
+      setToppings(prev => prev.filter(t => t.id !== id));
+      if (supabase) {
+        try {
+          const { error } = await supabase.from('toppings').delete().eq('id', id);
+          if (error) console.error('Erro ao excluir no Supabase:', error);
+        } catch (e) {
+          console.warn('Erro ao excluir no Supabase. Usando LocalStorage.', e);
+        }
+      }
+    }
   };
 
   const subtotal = useMemo(() => cart.reduce((acc, item) => acc + (item.price * item.quantity), 0), [cart]);
@@ -562,7 +681,10 @@ export default function App() {
 
     // Itens
     const itemsHeader = `🛒 *Itens do Pedido:*\n`;
-    const items = cart.map(item => `• ${item.quantity}x ${item.name} - R$ ${(item.price * item.quantity).toFixed(2)}`).join('\n');
+    const items = cart.map(item => {
+      const toppingText = item.selectedTopping ? ` (Cobertura: ${item.selectedTopping})` : '';
+      return `• ${item.quantity}x ${item.name}${toppingText} - R$ ${(item.price * item.quantity).toFixed(2)}`;
+    }).join('\n');
     
     // Pagamento
     let paymentText = '';
@@ -825,7 +947,7 @@ export default function App() {
                       <div className="space-y-4">
                         {categoryProducts.map(product => (
                           <div key={product.id}>
-                            <ProductCard product={product} onAdd={() => addToCart(product)} />
+                            <ProductCard product={product} onAdd={() => handleAddButtonClick(product)} />
                           </div>
                         ))}
                       </div>
@@ -863,7 +985,7 @@ export default function App() {
                 <div className="space-y-6">
                   <div className="space-y-4">
                     {cart.map(item => (
-                      <div key={item.id} className="flex items-center gap-4 bg-zinc-900/80 backdrop-blur-md p-3 rounded-2xl shadow-md border border-zinc-800/80">
+                      <div key={`${item.id}-${item.selectedTopping || ''}`} className="flex items-center gap-4 bg-zinc-900/80 backdrop-blur-md p-3 rounded-2xl shadow-md border border-zinc-800/80">
                         <img 
                           src={item.image} 
                           alt={item.name} 
@@ -872,26 +994,31 @@ export default function App() {
                         />
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-zinc-100 truncate">{item.name}</h4>
-                          <p className="text-orange-500 font-bold">R$ {item.price.toFixed(2)}</p>
+                          {item.selectedTopping && (
+                            <p className="text-xs text-zinc-400 mt-0.5">
+                              Cobertura: <span className="text-orange-500 font-extrabold">{item.selectedTopping}</span>
+                            </p>
+                          )}
+                          <p className="text-orange-500 font-bold mt-1">R$ {item.price.toFixed(2)}</p>
                           
                           <div className="flex items-center justify-between mt-2">
                             <div className="flex items-center gap-3 bg-zinc-950 rounded-lg p-1 border border-zinc-800">
                               <button 
-                                onClick={() => updateQuantity(item.id, -1)}
+                                onClick={() => updateQuantity(item.id, -1, item.selectedTopping)}
                                 className="p-1 hover:text-orange-500 transition-colors"
                               >
                                 {item.quantity === 1 ? <Trash2 size={16} className="text-red-400" /> : <Minus size={16} />}
                               </button>
                               <span className="font-bold text-sm w-4 text-center text-zinc-100">{item.quantity}</span>
                               <button 
-                                onClick={() => updateQuantity(item.id, 1)}
+                                onClick={() => updateQuantity(item.id, 1, item.selectedTopping)}
                                 className="p-1 hover:text-orange-500 transition-colors"
                               >
                                 <Plus size={16} />
                               </button>
                             </div>
                             <button 
-                              onClick={() => removeFromCart(item.id)}
+                              onClick={() => removeFromCart(item.id, item.selectedTopping)}
                               className="text-zinc-400 hover:text-red-500 transition-colors"
                             >
                               <X size={18} />
@@ -1163,10 +1290,10 @@ export default function App() {
                   </div>
 
                   {/* Seletor de Abas Admin */}
-                  <div className="flex gap-2 p-1 bg-zinc-950 rounded-xl border border-zinc-800 mb-6">
+                  <div className="flex gap-2 p-1 bg-zinc-950 rounded-xl border border-zinc-800 mb-6 flex-wrap sm:flex-nowrap">
                     <button
                       onClick={() => setAdminTab('products')}
-                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer ${
+                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer min-w-[80px] ${
                         adminTab === 'products' 
                           ? 'bg-orange-600 text-white shadow-lg' 
                           : 'text-zinc-400 hover:text-zinc-200'
@@ -1176,7 +1303,7 @@ export default function App() {
                     </button>
                     <button
                       onClick={() => setAdminTab('delivery')}
-                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer ${
+                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer min-w-[120px] ${
                         adminTab === 'delivery' 
                           ? 'bg-orange-600 text-white shadow-lg' 
                           : 'text-zinc-400 hover:text-zinc-200'
@@ -1185,8 +1312,18 @@ export default function App() {
                       Taxas de Entrega
                     </button>
                     <button
+                      onClick={() => setAdminTab('toppings')}
+                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer min-w-[100px] ${
+                        adminTab === 'toppings' 
+                          ? 'bg-orange-600 text-white shadow-lg' 
+                          : 'text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      Coberturas
+                    </button>
+                    <button
                       onClick={() => setAdminTab('calculator')}
-                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer ${
+                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer min-w-[100px] ${
                         adminTab === 'calculator' 
                           ? 'bg-orange-600 text-white shadow-lg' 
                           : 'text-zinc-400 hover:text-zinc-200'
@@ -1312,6 +1449,56 @@ export default function App() {
                                 onClick={() => handleDeleteNeighborhood(n.id)}
                                 className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-950 rounded-lg border border-zinc-800/50 transition-colors cursor-pointer"
                                 title="Excluir Bairro"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {adminTab === 'toppings' && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-6"
+                    >
+                      <form onSubmit={handleAddTopping} className="bg-zinc-900/80 backdrop-blur-md p-6 rounded-3xl border border-zinc-800 space-y-4">
+                        <h3 className="font-bold text-zinc-100 text-lg border-b border-zinc-800 pb-2 mb-3">Cadastrar Nova Cobertura</h3>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-zinc-400 uppercase">Nome da Cobertura</label>
+                          <input 
+                            required
+                            type="text" 
+                            value={newToppingName}
+                            onChange={(e) => setNewToppingName(e.target.value)}
+                            placeholder="Ex: Cheddar Cremoso"
+                            className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all placeholder-zinc-700"
+                          />
+                        </div>
+                        <button 
+                          type="submit"
+                          className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-orange-600/20 transition-all cursor-pointer"
+                        >
+                          <PlusCircle size={18} /> Cadastrar Cobertura
+                        </button>
+                      </form>
+
+                      <div className="space-y-3">
+                        <h3 className="font-bold text-zinc-400 text-sm uppercase tracking-wider">Coberturas Cadastradas ({toppings.length})</h3>
+                        <div className="space-y-2">
+                          {toppings.map(t => (
+                            <div key={t.id} className="bg-zinc-900/80 backdrop-blur-md p-4 rounded-2xl flex items-center justify-between border border-zinc-800">
+                              <div>
+                                <h4 className="font-bold text-zinc-100 text-base">{t.name}</h4>
+                              </div>
+                              <button 
+                                type="button"
+                                onClick={() => handleDeleteTopping(t.id)}
+                                className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-950 rounded-lg border border-zinc-800/50 transition-colors cursor-pointer"
+                                title="Excluir Cobertura"
                               >
                                 <Trash2 size={18} />
                               </button>
@@ -2139,6 +2326,81 @@ export default function App() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Coberturas */}
+      <AnimatePresence>
+        {customizingProduct !== null && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              className="bg-zinc-900 w-full max-w-sm rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 border border-zinc-800 space-y-6"
+            >
+              <div className="flex justify-between items-center">
+                <div>
+                  <span className="text-[10px] text-orange-500 font-extrabold uppercase tracking-widest">Personalizar Batata</span>
+                  <h3 className="text-xl font-black text-zinc-100 leading-tight">{customizingProduct.name}</h3>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => setCustomizingProduct(null)} 
+                  className="p-2 bg-zinc-950 text-zinc-100 rounded-full cursor-pointer hover:bg-zinc-800 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">Escolha a sua Cobertura:</label>
+                
+                {toppings.length === 0 ? (
+                  <p className="text-sm text-zinc-500 italic">Nenhuma cobertura cadastrada pelo administrador.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {toppings.map(t => (
+                      <label 
+                        key={t.id} 
+                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
+                          selectedTopping === t.name 
+                            ? 'bg-orange-600/10 border-orange-500 text-orange-500' 
+                            : 'bg-zinc-950 border-zinc-850 text-zinc-300 hover:border-zinc-700'
+                        }`}
+                      >
+                        <span className="font-bold text-sm">{t.name}</span>
+                        <input 
+                          type="radio" 
+                          name="topping" 
+                          value={t.name}
+                          checked={selectedTopping === t.name}
+                          onChange={() => setSelectedTopping(t.name)}
+                          className="w-4 h-4 accent-orange-500 cursor-pointer"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <button 
+                type="button"
+                onClick={() => {
+                  addToCart(customizingProduct, selectedTopping || undefined);
+                  setCustomizingProduct(null);
+                }}
+                className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-orange-600/20 transition-all cursor-pointer active:scale-95"
+              >
+                <ShoppingCart size={18} /> Adicionar ao Carrinho
+              </button>
             </motion.div>
           </motion.div>
         )}
