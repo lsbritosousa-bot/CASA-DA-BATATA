@@ -48,8 +48,7 @@ interface Topping {
 
 const INITIAL_TOPPINGS: Topping[] = [
   { id: '1', name: 'Cheddar' },
-  { id: '2', name: 'Requeijão' },
-  { id: '3', name: 'Catupiry' }
+  { id: '2', name: 'Requeijão' }
 ];
 
 interface Neighborhood {
