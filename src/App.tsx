@@ -147,19 +147,6 @@ const CATEGORY_NAMES = {
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('casa-da-batata-products');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return parsed.map((p: any) => ({
-          ...p,
-          category: p.category || 'batatas',
-          active: p.active !== undefined ? p.active : true
-        }));
-      } catch (e) {
-        return INITIAL_PRODUCTS;
-      }
-    }
     return INITIAL_PRODUCTS;
   });
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -172,7 +159,6 @@ export default function App() {
   // Estados de Bairros e Taxas de Entrega
   // Sempre reseta os bairros para INITIAL_NEIGHBORHOODS (Paragominas-PA)
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>(() => {
-    localStorage.removeItem('casa-da-batata-neighborhoods');
     return INITIAL_NEIGHBORHOODS;
   });
   const [adminTab, setAdminTab] = useState<'products' | 'delivery' | 'calculator' | 'toppings'>('products');
@@ -180,14 +166,6 @@ export default function App() {
   const [newNeighborhoodFee, setNewNeighborhoodFee] = useState(0);
 
   const [toppings, setToppings] = useState<Topping[]>(() => {
-    const saved = localStorage.getItem('casa-da-batata-toppings');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return INITIAL_TOPPINGS;
-      }
-    }
     return INITIAL_TOPPINGS;
   });
   const [newToppingName, setNewToppingName] = useState('');
@@ -197,14 +175,6 @@ export default function App() {
   // Estados da Calculadora de Precificação
   // Estados da Calculadora de Precificação (Ficha Técnica)
   const [calcIngredients, setCalcIngredients] = useState<CalcIngredient[]>(() => {
-    const saved = localStorage.getItem('casa-da-batata-calc-ingredients');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return INITIAL_CALC_INGREDIENTS;
-      }
-    }
     return INITIAL_CALC_INGREDIENTS;
   });
   const [currentRecipe, setCurrentRecipe] = useState<RecipeItem[]>([]);
@@ -247,6 +217,8 @@ export default function App() {
     active: true
   });
 
+  const [isLoading, setIsLoading] = useState(true);
+
   // Edit Product Form State
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [imageMethodEdit, setImageMethodEdit] = useState<'upload' | 'url'>('upload');
@@ -278,9 +250,12 @@ export default function App() {
     localStorage.setItem('casa-da-batata-toppings', JSON.stringify(toppings));
   }, [toppings]);
 
-  // Carregar dados do Supabase na montagem e realizar auto-seed se o banco estiver vazio
+  // Remover localStorage se der erro e carregar do Supabase
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
 
     const loadData = async () => {
       try {
@@ -416,6 +391,8 @@ export default function App() {
         setToppings(mappedToppings);
       } catch (err) {
         console.error('Falha ao carregar dados do Supabase, utilizando cache local:', err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -856,6 +833,16 @@ export default function App() {
   };
 
   // --- Views ---
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-orange-500 relative z-50">
+        <ChefHat size={64} className="animate-bounce mb-4 text-orange-500" />
+        <h2 className="text-2xl font-bold text-zinc-100 mb-2">Casa da Batata</h2>
+        <p className="text-zinc-400">Carregando cardápio quentinho...</p>
+      </div>
+    );
+  }
 
   const Header = () => (
     <header className="fixed top-0 left-0 right-0 h-16 bg-zinc-950/80 backdrop-blur-md z-50 border-b border-zinc-800/80 flex items-center justify-between px-4 shadow-sm">
