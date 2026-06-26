@@ -232,22 +232,38 @@ export default function App() {
 
   // Persist products
   useEffect(() => {
-    localStorage.setItem('casa-da-batata-products', JSON.stringify(products));
+    try {
+      localStorage.setItem('casa-da-batata-products', JSON.stringify(products));
+    } catch (e) {
+      console.warn('Erro ao salvar products no localStorage (Quota excedida?)', e);
+    }
   }, [products]);
 
   // Persist bairros
   useEffect(() => {
-    localStorage.setItem('casa-da-batata-neighborhoods', JSON.stringify(neighborhoods));
+    try {
+      localStorage.setItem('casa-da-batata-neighborhoods', JSON.stringify(neighborhoods));
+    } catch (e) {
+      console.warn('Erro ao salvar bairros no localStorage', e);
+    }
   }, [neighborhoods]);
 
   // Persist ingredientes da calculadora
   useEffect(() => {
-    localStorage.setItem('casa-da-batata-calc-ingredients', JSON.stringify(calcIngredients));
+    try {
+      localStorage.setItem('casa-da-batata-calc-ingredients', JSON.stringify(calcIngredients));
+    } catch (e) {
+      console.warn('Erro ao salvar calcIngredients no localStorage', e);
+    }
   }, [calcIngredients]);
 
   // Persist coberturas
   useEffect(() => {
-    localStorage.setItem('casa-da-batata-toppings', JSON.stringify(toppings));
+    try {
+      localStorage.setItem('casa-da-batata-toppings', JSON.stringify(toppings));
+    } catch (e) {
+      console.warn('Erro ao salvar coberturas no localStorage', e);
+    }
   }, [toppings]);
 
   // Remover localStorage se der erro e carregar do Supabase
