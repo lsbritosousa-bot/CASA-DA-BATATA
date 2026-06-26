@@ -457,7 +457,11 @@ export default function App() {
   };
 
   const handleAddButtonClick = (product: Product) => {
-    if (product.category === 'batatas') {
+    // Bloqueia a janela de coberturas para bebidas/refrigerantes, mesmo se a categoria estiver errada
+    const isDrink = product.category === 'bebidas' || 
+                    /(refrigerante|coca|fanta|guaran[aá]|sprite|água|suco|lata|litro|pepsi|kuat)/i.test(product.name);
+
+    if (product.category === 'batatas' && !isDrink) {
       setCustomizingProduct(product);
       if (toppings.length > 0) {
         setSelectedTopping(toppings[0].name);
