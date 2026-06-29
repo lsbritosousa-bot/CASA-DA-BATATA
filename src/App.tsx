@@ -713,7 +713,7 @@ export default function App() {
     const fullMessage = header + customerInfo + itemsHeader + items + '\n' + paymentText + totalsText;
     
     const messageEncoded = encodeURIComponent(fullMessage);
-    window.open(`https://wa.me/5591999151309?text=${messageEncoded}`, '_blank');
+    window.open(`https://wa.me/5591991893808?text=${messageEncoded}`, '_blank');
   };
 
   const handleAdminLogin = (e: FormEvent) => {
