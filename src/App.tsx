@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, FormEvent, ChangeEvent, useCallback } from 'react';
+import { useState, useEffect, useMemo, FormEvent, ChangeEvent } from 'react';
 import backgroundImage from './assets/background.jpg';
 import logoImage from './assets/logo.jpg';
 import { 
@@ -41,7 +41,18 @@ interface Product {
 
 interface CartItem extends Product {
   quantity: number;
+  selectedTopping?: string;
 }
+
+interface Topping {
+  id: string;
+  name: string;
+}
+
+const INITIAL_TOPPINGS: Topping[] = [
+  { id: '1', name: 'Cheddar' },
+  { id: '2', name: 'Requeijão' }
+];
 
 interface Neighborhood {
   id: string;
@@ -68,15 +79,31 @@ const INITIAL_CALC_INGREDIENTS: CalcIngredient[] = [
   { id: '4', name: 'Embalagem Padrão', unit: 'unit', costPrice: 1.80 }
 ];
 
-type View = 'menu' | 'cart' | 'admin' | 'coupons';
+type View = 'menu' | 'cart' | 'admin';
 
 // --- Initial Data ---
 const INITIAL_NEIGHBORHOODS: Neighborhood[] = [
-  { id: '1', name: 'Centro', deliveryFee: 5.00 },
-  { id: '2', name: 'Cidade Nova', deliveryFee: 7.00 },
-  { id: '3', name: 'Nova Marabá', deliveryFee: 8.00 },
-  { id: '4', name: 'São Félix', deliveryFee: 12.00 }
-];
+  { id: '1', name: 'Açaizal', deliveryFee: 8.00 },
+  { id: '2', name: 'Alto do Vale', deliveryFee: 8.00 },
+  { id: '3', name: 'Andradina', deliveryFee: 8.00 },
+  { id: '4', name: 'Angelim', deliveryFee: 8.00 },
+  { id: '5', name: 'Camboatã', deliveryFee: 8.00 },
+  { id: '6', name: 'Célio Miranda', deliveryFee: 8.00 },
+  { id: '7', name: 'Inocêncio Oliveira', deliveryFee: 8.00 },
+  { id: '8', name: 'Jardim Atlântico', deliveryFee: 8.00 },
+  { id: '9', name: 'Juparanã', deliveryFee: 8.00 },
+  { id: '10', name: 'Manoel Nahor de Lima', deliveryFee: 8.00 },
+  { id: '11', name: 'Nagib Demachki', deliveryFee: 8.00 },
+  { id: '12', name: 'Nova Conquista', deliveryFee: 8.00 },
+  { id: '13', name: 'Ouro Preto', deliveryFee: 8.00 },
+  { id: '14', name: 'Ouro Verde', deliveryFee: 8.00 },
+  { id: '15', name: 'Presidente Juscelino Kubitschek', deliveryFee: 8.00 },
+  { id: '16', name: 'Promissão', deliveryFee: 8.00 },
+  { id: '17', name: 'Sol Nascente', deliveryFee: 8.00 },
+  { id: '18', name: 'Tião Mineiro', deliveryFee: 8.00 },
+  { id: '19', name: 'Tropical', deliveryFee: 8.00 },
+  { id: '20', name: 'Uraim', deliveryFee: 8.00 },
+]; // Updated neighborhoods list for Paragominas
 
 const INITIAL_PRODUCTS: Product[] = [
   {
@@ -122,19 +149,6 @@ const CATEGORY_NAMES = {
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('casa-da-batata-products');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return parsed.map((p: any) => ({
-          ...p,
-          category: p.category || 'batatas',
-          active: p.active !== undefined ? p.active : true
-        }));
-      } catch (e) {
-        return INITIAL_PRODUCTS;
-      }
-    }
     return INITIAL_PRODUCTS;
   });
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -145,7 +159,7 @@ export default function App() {
     if (saved !== null) {
       try { return JSON.parse(saved); } catch { return true; }
     }
-    return true; // aberta por padrão
+    return true;
   });
   const [currentView, setCurrentView] = useState<View>('menu');
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
@@ -154,32 +168,24 @@ export default function App() {
   const [imageMethod, setImageMethod] = useState<'upload' | 'url'>('upload');
 
   // Estados de Bairros e Taxas de Entrega
+  // Sempre reseta os bairros para INITIAL_NEIGHBORHOODS (Paragominas-PA)
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>(() => {
-    const saved = localStorage.getItem('casa-da-batata-neighborhoods');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return INITIAL_NEIGHBORHOODS;
-      }
-    }
     return INITIAL_NEIGHBORHOODS;
   });
-  const [adminTab, setAdminTab] = useState<'products' | 'delivery' | 'calculator'>('products');
+  const [adminTab, setAdminTab] = useState<'products' | 'delivery' | 'calculator' | 'toppings'>('products');
   const [newNeighborhoodName, setNewNeighborhoodName] = useState('');
   const [newNeighborhoodFee, setNewNeighborhoodFee] = useState(0);
+
+  const [toppings, setToppings] = useState<Topping[]>(() => {
+    return INITIAL_TOPPINGS;
+  });
+  const [newToppingName, setNewToppingName] = useState('');
+  const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null);
+  const [selectedTopping, setSelectedTopping] = useState<string>('');
 
   // Estados da Calculadora de Precificação
   // Estados da Calculadora de Precificação (Ficha Técnica)
   const [calcIngredients, setCalcIngredients] = useState<CalcIngredient[]>(() => {
-    const saved = localStorage.getItem('casa-da-batata-calc-ingredients');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return INITIAL_CALC_INGREDIENTS;
-      }
-    }
     return INITIAL_CALC_INGREDIENTS;
   });
   const [currentRecipe, setCurrentRecipe] = useState<RecipeItem[]>([]);
@@ -222,6 +228,8 @@ export default function App() {
     active: true
   });
 
+  const [isLoading, setIsLoading] = useState(true);
+
   // Edit Product Form State
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [imageMethodEdit, setImageMethodEdit] = useState<'upload' | 'url'>('upload');
@@ -230,29 +238,60 @@ export default function App() {
   const [editingRecipeItemId, setEditingRecipeItemId] = useState<string | null>(null);
   const [editingRecipeItemQty, setEditingRecipeItemQty] = useState<number>(0);
 
+
+
+
   // Persist status da loja
   useEffect(() => {
-    localStorage.setItem('casa-da-batata-store-open', JSON.stringify(isStoreOpen));
+    try {
+      localStorage.setItem('casa-da-batata-store-open', JSON.stringify(isStoreOpen));
+    } catch (e) {
+      console.warn('Erro ao salvar status da loja', e);
+    }
   }, [isStoreOpen]);
 
   // Persist products
   useEffect(() => {
-    localStorage.setItem('casa-da-batata-products', JSON.stringify(products));
+    try {
+      localStorage.setItem('casa-da-batata-products', JSON.stringify(products));
+    } catch (e) {
+      console.warn('Erro ao salvar products no localStorage (Quota excedida?)', e);
+    }
   }, [products]);
 
   // Persist bairros
   useEffect(() => {
-    localStorage.setItem('casa-da-batata-neighborhoods', JSON.stringify(neighborhoods));
+    try {
+      localStorage.setItem('casa-da-batata-neighborhoods', JSON.stringify(neighborhoods));
+    } catch (e) {
+      console.warn('Erro ao salvar bairros no localStorage', e);
+    }
   }, [neighborhoods]);
 
   // Persist ingredientes da calculadora
   useEffect(() => {
-    localStorage.setItem('casa-da-batata-calc-ingredients', JSON.stringify(calcIngredients));
+    try {
+      localStorage.setItem('casa-da-batata-calc-ingredients', JSON.stringify(calcIngredients));
+    } catch (e) {
+      console.warn('Erro ao salvar calcIngredients no localStorage', e);
+    }
   }, [calcIngredients]);
 
-  // Carregar dados do Supabase na montagem e realizar auto-seed se o banco estiver vazio
+  // Persist coberturas
   useEffect(() => {
-    if (!supabase) return;
+    try {
+      localStorage.setItem('casa-da-batata-toppings', JSON.stringify(toppings));
+    } catch (e) {
+      console.warn('Erro ao salvar coberturas no localStorage', e);
+    }
+  }, [toppings]);
+
+  // Remover localStorage se der erro e carregar do Supabase
+  useEffect(() => {
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
 
     const loadData = async () => {
       try {
@@ -269,6 +308,18 @@ export default function App() {
         let dbProducts = productsRes.data || [];
         let dbNeighborhoods = neighborhoodsRes.data || [];
         let dbIngredients = ingredientsRes.data || [];
+        let dbToppings = [];
+
+        try {
+          const toppingsRes = await supabase.from('toppings').select('*');
+          if (!toppingsRes.error) {
+            dbToppings = toppingsRes.data || [];
+          } else {
+            console.warn('Erro ao carregar coberturas do Supabase:', toppingsRes.error);
+          }
+        } catch (e) {
+          console.warn('Erro ao conectar na tabela toppings do Supabase. Ignorando e usando LocalStorage.', e);
+        }
 
         // Auto-seed se o banco de dados estiver vazio mas tivermos dados locais
         if (dbProducts.length === 0 && products.length > 0) {
@@ -322,6 +373,24 @@ export default function App() {
           dbIngredients = toInsert;
         }
 
+        if (dbToppings.length === 0 && toppings.length > 0) {
+          const toInsert = toppings.map(t => ({
+            id: t.id,
+            name: t.name
+          }));
+          try {
+            const { error } = await supabase.from('toppings').insert(toInsert);
+            if (!error) {
+              console.log('Coberturas sincronizadas com o Supabase');
+            } else {
+              console.error('Erro ao sincronizar coberturas:', error);
+            }
+          } catch (e) {
+            console.warn('Erro ao salvar coberturas no Supabase:', e);
+          }
+          dbToppings = toInsert;
+        }
+
         // Mapear dados do banco para os tipos locais (camelCase)
         const mappedProducts: Product[] = dbProducts.map((p: any) => ({
           id: p.id,
@@ -347,11 +416,19 @@ export default function App() {
           costPrice: Number(ing.cost_price)
         }));
 
+        const mappedToppings: Topping[] = dbToppings.map((t: any) => ({
+          id: t.id,
+          name: t.name
+        }));
+
         setProducts(mappedProducts);
         setNeighborhoods(mappedNeighborhoods);
         setCalcIngredients(mappedIngredients);
+        setToppings(mappedToppings);
       } catch (err) {
         console.error('Falha ao carregar dados do Supabase, utilizando cache local:', err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -373,28 +450,89 @@ export default function App() {
   }, []);
 
   // --- Handlers ---
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, topping?: string) => {
     setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
+      const existing = prev.find(item => item.id === product.id && item.selectedTopping === topping);
       if (existing) {
-        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+        return prev.map(item => (item.id === product.id && item.selectedTopping === topping) 
+          ? { ...item, quantity: item.quantity + 1 } 
+          : item
+        );
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prev, { ...product, quantity: 1, selectedTopping: topping }];
     });
   };
 
-  const removeFromCart = (id: string) => {
-    setCart(prev => prev.filter(item => item.id !== id));
+  const removeFromCart = (id: string, topping?: string) => {
+    setCart(prev => prev.filter(item => !(item.id === id && item.selectedTopping === topping)));
   };
 
-  const updateQuantity = (id: string, delta: number) => {
+  const updateQuantity = (id: string, delta: number, topping?: string) => {
     setCart(prev => prev.map(item => {
-      if (item.id === id) {
+      if (item.id === id && item.selectedTopping === topping) {
         const newQty = Math.max(1, item.quantity + delta);
         return { ...item, quantity: newQty };
       }
       return item;
     }));
+  };
+
+  const handleAddButtonClick = (product: Product) => {
+    // Bloqueia a janela de coberturas para bebidas/refrigerantes, mesmo se a categoria estiver errada
+    const isDrink = product.category === 'bebidas' || 
+                    /(refrigerante|coca|fanta|guaran[aá]|sprite|água|suco|lata|litro|pepsi|kuat)/i.test(product.name);
+    // Impede que o modal de coberturas apareça para lasanha
+    const isLasagna = /lasanha/i.test(product.name);
+
+    if (product.category === 'batatas' && !isDrink && !isLasagna) {
+      setCustomizingProduct(product);
+      if (toppings.length > 0) {
+        setSelectedTopping(toppings[0].name);
+      } else {
+        setSelectedTopping('');
+      }
+    } else {
+      addToCart(product);
+    }
+  };
+
+  const handleAddTopping = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newToppingName.trim()) return;
+
+    const newTopping: Topping = {
+      id: Date.now().toString(),
+      name: newToppingName.trim()
+    };
+
+    setToppings(prev => [...prev, newTopping]);
+    setNewToppingName('');
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('toppings').insert({
+          id: newTopping.id,
+          name: newTopping.name
+        });
+        if (error) console.error('Erro ao salvar no Supabase:', error);
+      } catch (e) {
+        console.warn('Erro ao salvar no Supabase. Usando LocalStorage.', e);
+      }
+    }
+  };
+
+  const handleDeleteTopping = async (id: string) => {
+    if (window.confirm('Tem certeza que deseja excluir esta cobertura?')) {
+      setToppings(prev => prev.filter(t => t.id !== id));
+      if (supabase) {
+        try {
+          const { error } = await supabase.from('toppings').delete().eq('id', id);
+          if (error) console.error('Erro ao excluir no Supabase:', error);
+        } catch (e) {
+          console.warn('Erro ao excluir no Supabase. Usando LocalStorage.', e);
+        }
+      }
+    }
   };
 
   const subtotal = useMemo(() => cart.reduce((acc, item) => acc + (item.price * item.quantity), 0), [cart]);
@@ -572,7 +710,10 @@ export default function App() {
 
     // Itens
     const itemsHeader = `🛒 *Itens do Pedido:*\n`;
-    const items = cart.map(item => `• ${item.quantity}x ${item.name} - R$ ${(item.price * item.quantity).toFixed(2)}`).join('\n');
+    const items = cart.map(item => {
+      const toppingText = item.selectedTopping ? ` (Cobertura: ${item.selectedTopping})` : '';
+      return `• ${item.quantity}x ${item.name}${toppingText} - R$ ${(item.price * item.quantity).toFixed(2)}`;
+    }).join('\n');
     
     // Pagamento
     let paymentText = '';
@@ -595,7 +736,7 @@ export default function App() {
     const fullMessage = header + customerInfo + itemsHeader + items + '\n' + paymentText + totalsText;
     
     const messageEncoded = encodeURIComponent(fullMessage);
-    window.open(`https://wa.me/5591999151309?text=${messageEncoded}`, '_blank');
+    window.open(`https://wa.me/5591991893808?text=${messageEncoded}`, '_blank');
   };
 
   const handleAdminLogin = (e: FormEvent) => {
@@ -735,6 +876,16 @@ export default function App() {
 
   // --- Views ---
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-orange-500 relative z-50">
+        <ChefHat size={64} className="animate-bounce mb-4 text-orange-500" />
+        <h2 className="text-2xl font-bold text-zinc-100 mb-2">Casa da Batata</h2>
+        <p className="text-zinc-400">Carregando cardápio quentinho...</p>
+      </div>
+    );
+  }
+
   const Header = () => (
     <header className="fixed top-0 left-0 right-0 h-16 bg-zinc-950/80 backdrop-blur-md z-50 border-b border-zinc-800/80 flex items-center justify-between px-4 shadow-sm">
       <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView('menu')}>
@@ -766,7 +917,7 @@ export default function App() {
     <nav className="fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-zinc-800 py-2 px-6 flex justify-between items-center z-50 lg:max-w-md lg:mx-auto lg:rounded-t-3xl lg:shadow-2xl">
       <NavItem icon={MenuIcon} label="Menu" active={currentView === 'menu'} onClick={() => setCurrentView('menu')} />
       <NavItem icon={ShoppingCart} label="Carrinho" active={currentView === 'cart'} onClick={() => setCurrentView('cart')} hasBadge={totalItems > 0} badge={totalItems} />
-      <NavItem icon={Ticket} label="Cupons" active={currentView === 'coupons'} onClick={() => setCurrentView('coupons')} />
+      
     </nav>
   );
 
@@ -797,14 +948,11 @@ export default function App() {
   // --- Tela de Loja Fechada (para clientes) ---
   const ClosedScreen = () => (
     <div className="min-h-screen text-zinc-100 font-sans selection:bg-orange-500/20 relative flex flex-col">
-      {/* Imagem de Fundo */}
       <div 
         className="fixed inset-0 z-[-2] bg-cover bg-center bg-no-repeat pointer-events-none"
         style={{ backgroundImage: `url(${backgroundImage})` }}
       />
       <div className="fixed inset-0 z-[-1] bg-black/75 pointer-events-none" />
-
-      {/* Header */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-zinc-950/80 backdrop-blur-md z-50 border-b border-zinc-800/80 flex items-center justify-between px-4 shadow-sm">
         <div className="flex items-center gap-2">
           <img src={logoImage} alt="Casa da Batata Logo" className="w-10 h-10 rounded-lg object-cover border border-zinc-800" />
@@ -814,8 +962,6 @@ export default function App() {
           <Moon size={10} /> Fechado
         </span>
       </header>
-
-      {/* Conteúdo Central */}
       <main className="flex-1 flex items-center justify-center px-4 pt-16">
         <motion.div
           initial={{ opacity: 0, scale: 0.92, y: 20 }}
@@ -823,7 +969,6 @@ export default function App() {
           transition={{ type: 'spring', stiffness: 200, damping: 20 }}
           className="max-w-sm w-full text-center"
         >
-          {/* Ícone animado */}
           <div className="relative inline-flex items-center justify-center mb-8">
             <div className="absolute inset-0 rounded-full bg-red-600/20 animate-ping" style={{ animationDuration: '2.5s' }} />
             <div className="relative w-28 h-28 rounded-full bg-zinc-900 border-2 border-zinc-700 flex items-center justify-center shadow-2xl">
@@ -833,14 +978,11 @@ export default function App() {
               </div>
             </div>
           </div>
-
           <h1 className="text-3xl font-black text-zinc-100 mb-2 tracking-tight">Estamos Fechados</h1>
           <p className="text-zinc-400 text-base leading-relaxed mb-8">
             No momento não estamos aceitando pedidos.<br />
             Voltamos em breve! 🥔
           </p>
-
-          {/* Card de info */}
           <div className="bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-3xl p-6 space-y-4 text-left">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-orange-600/20 flex items-center justify-center flex-shrink-0">
@@ -862,7 +1004,7 @@ export default function App() {
     </div>
   );
 
-  // Se a loja estiver fechada e o cliente não for admin, mostra a tela de fechado
+  // Se a loja estiver fechada e o cliente não for admin, mostra tela de fechado
   if (!isStoreOpen && currentView !== 'admin') {
     return <ClosedScreen />;
   }
@@ -876,7 +1018,7 @@ export default function App() {
           backgroundImage: `url(${backgroundImage})`
         }}
       />
-      {/* Overlay escuro translúcido para combinar com a logo e criar um visual noturno premium */}
+      {/* Overlay escuro translúcido */}
       <div className="fixed inset-0 z-[-1] bg-black/60 pointer-events-none" />
 
       <Header />
@@ -908,7 +1050,7 @@ export default function App() {
                       <div className="space-y-4">
                         {categoryProducts.map(product => (
                           <div key={product.id}>
-                            <ProductCard product={product} onAdd={() => addToCart(product)} />
+                            <ProductCard product={product} onAdd={() => handleAddButtonClick(product)} />
                           </div>
                         ))}
                       </div>
@@ -946,7 +1088,7 @@ export default function App() {
                 <div className="space-y-6">
                   <div className="space-y-4">
                     {cart.map(item => (
-                      <div key={item.id} className="flex items-center gap-4 bg-zinc-900/80 backdrop-blur-md p-3 rounded-2xl shadow-md border border-zinc-800/80">
+                      <div key={`${item.id}-${item.selectedTopping || ''}`} className="flex items-center gap-4 bg-zinc-900/80 backdrop-blur-md p-3 rounded-2xl shadow-md border border-zinc-800/80">
                         <img 
                           src={item.image} 
                           alt={item.name} 
@@ -955,26 +1097,31 @@ export default function App() {
                         />
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-zinc-100 truncate">{item.name}</h4>
-                          <p className="text-orange-500 font-bold">R$ {item.price.toFixed(2)}</p>
+                          {item.selectedTopping && (
+                            <p className="text-xs text-zinc-400 mt-0.5">
+                              Cobertura: <span className="text-orange-500 font-extrabold">{item.selectedTopping}</span>
+                            </p>
+                          )}
+                          <p className="text-orange-500 font-bold mt-1">R$ {item.price.toFixed(2)}</p>
                           
                           <div className="flex items-center justify-between mt-2">
                             <div className="flex items-center gap-3 bg-zinc-950 rounded-lg p-1 border border-zinc-800">
                               <button 
-                                onClick={() => updateQuantity(item.id, -1)}
+                                onClick={() => updateQuantity(item.id, -1, item.selectedTopping)}
                                 className="p-1 hover:text-orange-500 transition-colors"
                               >
                                 {item.quantity === 1 ? <Trash2 size={16} className="text-red-400" /> : <Minus size={16} />}
                               </button>
                               <span className="font-bold text-sm w-4 text-center text-zinc-100">{item.quantity}</span>
                               <button 
-                                onClick={() => updateQuantity(item.id, 1)}
+                                onClick={() => updateQuantity(item.id, 1, item.selectedTopping)}
                                 className="p-1 hover:text-orange-500 transition-colors"
                               >
                                 <Plus size={16} />
                               </button>
                             </div>
                             <button 
-                              onClick={() => removeFromCart(item.id)}
+                              onClick={() => removeFromCart(item.id, item.selectedTopping)}
                               className="text-zinc-400 hover:text-red-500 transition-colors"
                             >
                               <X size={18} />
@@ -1171,37 +1318,6 @@ export default function App() {
             </motion.div>
           )}
 
-          {currentView === 'coupons' && (
-            <motion.div 
-              key="coupons"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="px-4 py-8"
-            >
-              <h2 className="text-2xl font-bold mb-6 text-zinc-100">Cupons Disponíveis</h2>
-              <div className="space-y-4">
-                {[
-                  { code: 'PRIMEIRACOMPRA', desc: 'R$ 10 de desconto no seu primeiro pedido.', val: '10.00' },
-                  { code: 'BATATALOVER', desc: '5% de desconto em pedidos acima de R$ 50.', val: '5%' }
-                ].map(coupon => (
-                  <div key={coupon.code} className="bg-zinc-900/80 backdrop-blur-md border-2 border-dashed border-orange-500/30 rounded-2xl p-6 relative overflow-hidden">
-                    <div className="absolute -top-4 -right-4 w-12 h-12 bg-zinc-950 rounded-full" />
-                    <div className="absolute -bottom-4 -left-4 w-12 h-12 bg-zinc-950 rounded-full" />
-                    
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="bg-zinc-100 text-zinc-950 text-[10px] font-bold px-2 py-1 rounded">ATIVO</span>
-                      <span className="text-orange-500 font-black text-xl">{coupon.val} OFF</span>
-                    </div>
-                    <h4 className="font-bold text-lg mb-1 text-zinc-100">{coupon.code}</h4>
-                    <p className="text-zinc-400 text-sm">{coupon.desc}</p>
-                    <button className="mt-4 w-full bg-zinc-950 hover:bg-zinc-900 text-zinc-200 font-bold py-2 rounded-lg text-sm transition-colors cursor-pointer">
-                      COPIAR CÓDIGO
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
 
           {currentView === 'admin' && (
             <motion.div 
@@ -1235,7 +1351,7 @@ export default function App() {
                 </div>
               ) : (
                 <div>
-                  <div className="flex justify-between items-center mb-6">
+                  <div className="flex justify-between items-center mb-8">
                     <h2 className="text-2xl font-bold text-zinc-100">Painel Admin</h2>
                     <button 
                       onClick={() => setIsAdminLoggedIn(false)}
@@ -1277,8 +1393,6 @@ export default function App() {
                           </p>
                         </div>
                       </div>
-
-                      {/* Switch toggle */}
                       <button
                         type="button"
                         onClick={() => setIsStoreOpen(prev => !prev)}
@@ -1294,8 +1408,6 @@ export default function App() {
                         />
                       </button>
                     </div>
-
-                    {/* Botão grande de ação */}
                     <button
                       type="button"
                       onClick={() => setIsStoreOpen(prev => !prev)}
@@ -1311,10 +1423,10 @@ export default function App() {
                   </motion.div>
 
                   {/* Seletor de Abas Admin */}
-                  <div className="flex gap-2 p-1 bg-zinc-950 rounded-xl border border-zinc-800 mb-6">
+                  <div className="flex gap-2 p-1 bg-zinc-950 rounded-xl border border-zinc-800 mb-6 flex-wrap sm:flex-nowrap">
                     <button
                       onClick={() => setAdminTab('products')}
-                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer ${
+                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer min-w-[80px] ${
                         adminTab === 'products' 
                           ? 'bg-orange-600 text-white shadow-lg' 
                           : 'text-zinc-400 hover:text-zinc-200'
@@ -1324,7 +1436,7 @@ export default function App() {
                     </button>
                     <button
                       onClick={() => setAdminTab('delivery')}
-                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer ${
+                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer min-w-[120px] ${
                         adminTab === 'delivery' 
                           ? 'bg-orange-600 text-white shadow-lg' 
                           : 'text-zinc-400 hover:text-zinc-200'
@@ -1333,8 +1445,18 @@ export default function App() {
                       Taxas de Entrega
                     </button>
                     <button
+                      onClick={() => setAdminTab('toppings')}
+                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer min-w-[100px] ${
+                        adminTab === 'toppings' 
+                          ? 'bg-orange-600 text-white shadow-lg' 
+                          : 'text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      Coberturas
+                    </button>
+                    <button
                       onClick={() => setAdminTab('calculator')}
-                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer ${
+                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer min-w-[100px] ${
                         adminTab === 'calculator' 
                           ? 'bg-orange-600 text-white shadow-lg' 
                           : 'text-zinc-400 hover:text-zinc-200'
@@ -1460,6 +1582,56 @@ export default function App() {
                                 onClick={() => handleDeleteNeighborhood(n.id)}
                                 className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-950 rounded-lg border border-zinc-800/50 transition-colors cursor-pointer"
                                 title="Excluir Bairro"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {adminTab === 'toppings' && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-6"
+                    >
+                      <form onSubmit={handleAddTopping} className="bg-zinc-900/80 backdrop-blur-md p-6 rounded-3xl border border-zinc-800 space-y-4">
+                        <h3 className="font-bold text-zinc-100 text-lg border-b border-zinc-800 pb-2 mb-3">Cadastrar Nova Cobertura</h3>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-zinc-400 uppercase">Nome da Cobertura</label>
+                          <input 
+                            required
+                            type="text" 
+                            value={newToppingName}
+                            onChange={(e) => setNewToppingName(e.target.value)}
+                            placeholder="Ex: Cheddar Cremoso"
+                            className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all placeholder-zinc-700"
+                          />
+                        </div>
+                        <button 
+                          type="submit"
+                          className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-orange-600/20 transition-all cursor-pointer"
+                        >
+                          <PlusCircle size={18} /> Cadastrar Cobertura
+                        </button>
+                      </form>
+
+                      <div className="space-y-3">
+                        <h3 className="font-bold text-zinc-400 text-sm uppercase tracking-wider">Coberturas Cadastradas ({toppings.length})</h3>
+                        <div className="space-y-2">
+                          {toppings.map(t => (
+                            <div key={t.id} className="bg-zinc-900/80 backdrop-blur-md p-4 rounded-2xl flex items-center justify-between border border-zinc-800">
+                              <div>
+                                <h4 className="font-bold text-zinc-100 text-base">{t.name}</h4>
+                              </div>
+                              <button 
+                                type="button"
+                                onClick={() => handleDeleteTopping(t.id)}
+                                className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-950 rounded-lg border border-zinc-800/50 transition-colors cursor-pointer"
+                                title="Excluir Cobertura"
                               >
                                 <Trash2 size={18} />
                               </button>
@@ -1776,7 +1948,7 @@ export default function App() {
                             : ing.costPrice * item.quantity;
                           return sum + itemCost;
                         }, 0);
-                        
+
                         const marginPercent = calcMargin / 100;
                         const suggestedPrice = marginPercent < 1 ? totalUnitCost / (1 - marginPercent) : totalUnitCost;
                         const grossProfit = suggestedPrice - totalUnitCost;
@@ -1785,7 +1957,7 @@ export default function App() {
                         return (
                           <div className="bg-zinc-900/80 backdrop-blur-md p-6 rounded-3xl border border-zinc-800 space-y-4">
                             <h3 className="font-bold text-zinc-100 text-lg border-b border-zinc-800 pb-2 mb-3">3. Resultados da Precificação</h3>
-                            
+
                             <div className="grid grid-cols-2 gap-4">
                               <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800/80">
                                 <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Custo Unitário Total</span>
@@ -1793,7 +1965,7 @@ export default function App() {
                               </div>
                               <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800/80 flex flex-col justify-between">
                                 <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">Margem de Lucro (%)</span>
-                                <input 
+                                <input
                                   type="number"
                                   min="0"
                                   max="99"
@@ -2287,6 +2459,81 @@ export default function App() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Coberturas */}
+      <AnimatePresence>
+        {customizingProduct !== null && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              className="bg-zinc-900 w-full max-w-sm rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 border border-zinc-800 space-y-6"
+            >
+              <div className="flex justify-between items-center">
+                <div>
+                  <span className="text-[10px] text-orange-500 font-extrabold uppercase tracking-widest">Personalizar Batata</span>
+                  <h3 className="text-xl font-black text-zinc-100 leading-tight">{customizingProduct.name}</h3>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => setCustomizingProduct(null)} 
+                  className="p-2 bg-zinc-950 text-zinc-100 rounded-full cursor-pointer hover:bg-zinc-800 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">Escolha a sua Cobertura:</label>
+                
+                {toppings.length === 0 ? (
+                  <p className="text-sm text-zinc-500 italic">Nenhuma cobertura cadastrada pelo administrador.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {toppings.map(t => (
+                      <label 
+                        key={t.id} 
+                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
+                          selectedTopping === t.name 
+                            ? 'bg-orange-600/10 border-orange-500 text-orange-500' 
+                            : 'bg-zinc-950 border-zinc-850 text-zinc-300 hover:border-zinc-700'
+                        }`}
+                      >
+                        <span className="font-bold text-sm">{t.name}</span>
+                        <input 
+                          type="radio" 
+                          name="topping" 
+                          value={t.name}
+                          checked={selectedTopping === t.name}
+                          onChange={() => setSelectedTopping(t.name)}
+                          className="w-4 h-4 accent-orange-500 cursor-pointer"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <button 
+                type="button"
+                onClick={() => {
+                  addToCart(customizingProduct, selectedTopping || undefined);
+                  setCustomizingProduct(null);
+                }}
+                className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-orange-600/20 transition-all cursor-pointer active:scale-95"
+              >
+                <ShoppingCart size={18} /> Adicionar ao Carrinho
+              </button>
             </motion.div>
           </motion.div>
         )}
