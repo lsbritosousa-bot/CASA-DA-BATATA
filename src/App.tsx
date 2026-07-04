@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, FormEvent, ChangeEvent } from 'react';
+import { useState, useEffect, useMemo, FormEvent, ChangeEvent, useCallback } from 'react';
 import backgroundImage from './assets/background.jpg';
 import logoImage from './assets/logo.jpg';
 import { 
@@ -19,7 +19,10 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
-  Edit2
+  Edit2,
+  Power,
+  Clock,
+  Moon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from './lib/supabase';
@@ -135,6 +138,15 @@ export default function App() {
     return INITIAL_PRODUCTS;
   });
   const [cart, setCart] = useState<CartItem[]>([]);
+
+  // Estado de status da loja (aberta/fechada)
+  const [isStoreOpen, setIsStoreOpen] = useState<boolean>(() => {
+    const saved = localStorage.getItem('casa-da-batata-store-open');
+    if (saved !== null) {
+      try { return JSON.parse(saved); } catch { return true; }
+    }
+    return true; // aberta por padrão
+  });
   const [currentView, setCurrentView] = useState<View>('menu');
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
@@ -218,12 +230,10 @@ export default function App() {
   const [editingRecipeItemId, setEditingRecipeItemId] = useState<string | null>(null);
   const [editingRecipeItemQty, setEditingRecipeItemQty] = useState<number>(0);
 
-  // Edit Calc Ingredient State (modal da engrenagem)
-  const [editingIngredientId, setEditingIngredientId] = useState<string | null>(null);
-  const [editIngName, setEditIngName] = useState<string>('');
-  const [editIngUnit, setEditIngUnit] = useState<'kg' | 'unit'>('kg');
-  const [editIngPrice, setEditIngPrice] = useState<number>(0);
-
+  // Persist status da loja
+  useEffect(() => {
+    localStorage.setItem('casa-da-batata-store-open', JSON.stringify(isStoreOpen));
+  }, [isStoreOpen]);
 
   // Persist products
   useEffect(() => {
@@ -784,6 +794,79 @@ export default function App() {
     </button>
   );
 
+  // --- Tela de Loja Fechada (para clientes) ---
+  const ClosedScreen = () => (
+    <div className="min-h-screen text-zinc-100 font-sans selection:bg-orange-500/20 relative flex flex-col">
+      {/* Imagem de Fundo */}
+      <div 
+        className="fixed inset-0 z-[-2] bg-cover bg-center bg-no-repeat pointer-events-none"
+        style={{ backgroundImage: `url(${backgroundImage})` }}
+      />
+      <div className="fixed inset-0 z-[-1] bg-black/75 pointer-events-none" />
+
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-zinc-950/80 backdrop-blur-md z-50 border-b border-zinc-800/80 flex items-center justify-between px-4 shadow-sm">
+        <div className="flex items-center gap-2">
+          <img src={logoImage} alt="Casa da Batata Logo" className="w-10 h-10 rounded-lg object-cover border border-zinc-800" />
+          <span className="font-bold text-zinc-100 text-lg tracking-tight">Casa da Batata</span>
+        </div>
+        <span className="text-[10px] font-bold text-red-400 bg-red-950/60 border border-red-800/50 px-2.5 py-1 rounded-full uppercase tracking-widest flex items-center gap-1">
+          <Moon size={10} /> Fechado
+        </span>
+      </header>
+
+      {/* Conteúdo Central */}
+      <main className="flex-1 flex items-center justify-center px-4 pt-16">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.92, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+          className="max-w-sm w-full text-center"
+        >
+          {/* Ícone animado */}
+          <div className="relative inline-flex items-center justify-center mb-8">
+            <div className="absolute inset-0 rounded-full bg-red-600/20 animate-ping" style={{ animationDuration: '2.5s' }} />
+            <div className="relative w-28 h-28 rounded-full bg-zinc-900 border-2 border-zinc-700 flex items-center justify-center shadow-2xl">
+              <img src={logoImage} alt="Logo" className="w-20 h-20 rounded-full object-cover opacity-40" />
+              <div className="absolute inset-0 rounded-full bg-zinc-950/60 flex items-center justify-center">
+                <Moon size={36} className="text-red-400" />
+              </div>
+            </div>
+          </div>
+
+          <h1 className="text-3xl font-black text-zinc-100 mb-2 tracking-tight">Estamos Fechados</h1>
+          <p className="text-zinc-400 text-base leading-relaxed mb-8">
+            No momento não estamos aceitando pedidos.<br />
+            Voltamos em breve! 🥔
+          </p>
+
+          {/* Card de info */}
+          <div className="bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-3xl p-6 space-y-4 text-left">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-600/20 flex items-center justify-center flex-shrink-0">
+                <Clock size={20} className="text-orange-500" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Horário de Funcionamento</p>
+                <p className="text-zinc-200 font-semibold text-sm">Seg – Sex: 18h às 23h</p>
+                <p className="text-zinc-200 font-semibold text-sm">Sáb – Dom: 17h às 00h</p>
+              </div>
+            </div>
+            <div className="h-px bg-zinc-800" />
+            <p className="text-xs text-zinc-500 text-center">
+              Quando abrirmos, o cardápio estará disponível automaticamente.
+            </p>
+          </div>
+        </motion.div>
+      </main>
+    </div>
+  );
+
+  // Se a loja estiver fechada e o cliente não for admin, mostra a tela de fechado
+  if (!isStoreOpen && currentView !== 'admin') {
+    return <ClosedScreen />;
+  }
+
   return (
     <div className="min-h-screen text-zinc-100 font-sans pb-24 selection:bg-orange-500/20 relative">
       {/* Imagem de Fundo */}
@@ -1152,7 +1235,7 @@ export default function App() {
                 </div>
               ) : (
                 <div>
-                  <div className="flex justify-between items-center mb-8">
+                  <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold text-zinc-100">Painel Admin</h2>
                     <button 
                       onClick={() => setIsAdminLoggedIn(false)}
@@ -1161,6 +1244,71 @@ export default function App() {
                       Sair
                     </button>
                   </div>
+
+                  {/* Toggle de Status da Loja */}
+                  <motion.div
+                    className={`mb-6 p-5 rounded-3xl border-2 transition-all duration-500 ${
+                      isStoreOpen 
+                        ? 'bg-emerald-950/40 border-emerald-700/60' 
+                        : 'bg-red-950/40 border-red-800/60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors duration-500 ${
+                          isStoreOpen ? 'bg-emerald-600/30' : 'bg-red-700/30'
+                        }`}>
+                          {isStoreOpen 
+                            ? <Store size={22} className="text-emerald-400" />
+                            : <Moon size={22} className="text-red-400" />
+                          }
+                        </div>
+                        <div>
+                          <p className={`font-black text-base transition-colors duration-500 ${
+                            isStoreOpen ? 'text-emerald-300' : 'text-red-300'
+                          }`}>
+                            {isStoreOpen ? '🟢 Loja Aberta' : '🔴 Loja Fechada'}
+                          </p>
+                          <p className="text-xs text-zinc-400">
+                            {isStoreOpen 
+                              ? 'Clientes podem fazer pedidos agora.'
+                              : 'Clientes veem a tela de fechado.'
+                            }
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Switch toggle */}
+                      <button
+                        type="button"
+                        onClick={() => setIsStoreOpen(prev => !prev)}
+                        className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none flex-shrink-0 cursor-pointer ${
+                          isStoreOpen ? 'bg-emerald-600' : 'bg-red-700'
+                        }`}
+                        title={isStoreOpen ? 'Fechar loja' : 'Abrir loja'}
+                      >
+                        <span
+                          className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${
+                            isStoreOpen ? 'translate-x-7' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    {/* Botão grande de ação */}
+                    <button
+                      type="button"
+                      onClick={() => setIsStoreOpen(prev => !prev)}
+                      className={`mt-4 w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer ${
+                        isStoreOpen 
+                          ? 'bg-red-700/80 hover:bg-red-700 text-red-100 border border-red-600/40' 
+                          : 'bg-emerald-700/80 hover:bg-emerald-700 text-emerald-100 border border-emerald-600/40'
+                      }`}
+                    >
+                      <Power size={16} />
+                      {isStoreOpen ? 'Fechar Loja Agora' : 'Abrir Loja Agora'}
+                    </button>
+                  </motion.div>
 
                   {/* Seletor de Abas Admin */}
                   <div className="flex gap-2 p-1 bg-zinc-950 rounded-xl border border-zinc-800 mb-6">
