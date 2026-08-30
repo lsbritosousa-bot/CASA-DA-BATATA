@@ -158,13 +158,8 @@ export default function App() {
   const [cart, setCart] = useState<CartItem[]>([]);
 
   // Estado de status da loja (aberta/fechada)
-  const [isStoreOpen, setIsStoreOpen] = useState<boolean>(() => {
-    const saved = localStorage.getItem('casa-da-batata-store-open');
-    if (saved !== null) {
-      try { return JSON.parse(saved); } catch { return true; }
-    }
-    return true;
-  });
+  // Valor inicial: true (aberta) — o Supabase será consultado logo após o carregamento
+  const [isStoreOpen, setIsStoreOpen] = useState<boolean>(true);
   const [currentView, setCurrentView] = useState<View>('menu');
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
@@ -246,13 +241,10 @@ export default function App() {
 
 
 
-  // Persist status da loja
+  // Persist status da loja no Supabase (não mais localStorage)
+  // O status é salvo no banco sempre que o admin altera
   useEffect(() => {
-    try {
-      localStorage.setItem('casa-da-batata-store-open', JSON.stringify(isStoreOpen));
-    } catch (e) {
-      console.warn('Erro ao salvar status da loja', e);
-    }
+    // Não salva no mount inicial, apenas em alterações reais
   }, [isStoreOpen]);
 
   // Persist products
@@ -314,6 +306,16 @@ export default function App() {
         let dbNeighborhoods = neighborhoodsRes.data || [];
         let dbIngredients = ingredientsRes.data || [];
         let dbToppings = [];
+
+        // Carregar status da loja do Supabase
+        try {
+          const settingsRes = await supabase.from('settings').select('value').eq('key', 'store_open').single();
+          if (!settingsRes.error && settingsRes.data) {
+            setIsStoreOpen(settingsRes.data.value === true || settingsRes.data.value === 'true');
+          }
+        } catch (e) {
+          console.warn('Erro ao carregar status da loja do Supabase. Mantendo como aberta.', e);
+        }
 
         try {
           const toppingsRes = await supabase.from('toppings').select('*');
@@ -442,6 +444,34 @@ export default function App() {
     };
 
     loadData();
+  }, []);
+
+  // Polling: clientes verificam o status da loja a cada 30 segundos
+  useEffect(() => {
+    if (!supabase) return;
+
+    const checkStoreStatus = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'store_open')
+          .single();
+        if (!error && data) {
+          const open = data.value === true || data.value === 'true';
+          setIsStoreOpen(open);
+        }
+      } catch (e) {
+        // Silencioso: falha no polling não deve interromper o app
+      }
+    };
+
+    // Verifica imediatamente ao montar (caso o loadData ainda não tenha terminado)
+    checkStoreStatus();
+
+    // Polling a cada 30 segundos
+    const interval = setInterval(checkStoreStatus, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Atalho F12 para acessar painel admin
@@ -1400,7 +1430,21 @@ export default function App() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => setIsStoreOpen(prev => !prev)}
+                        onClick={async () => {
+                          const newStatus = !isStoreOpen;
+                          setIsStoreOpen(newStatus);
+                          // Salvar no Supabase para que todos os clientes vejam
+                          if (supabase) {
+                            try {
+                              const { error } = await supabase
+                                .from('settings')
+                                .upsert({ key: 'store_open', value: newStatus }, { onConflict: 'key' });
+                              if (error) console.error('Erro ao salvar status da loja:', error);
+                            } catch (e) {
+                              console.warn('Erro ao salvar status da loja no Supabase:', e);
+                            }
+                          }
+                        }}
                         className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none flex-shrink-0 cursor-pointer ${
                           isStoreOpen ? 'bg-emerald-600' : 'bg-red-700'
                         }`}
@@ -1415,7 +1459,21 @@ export default function App() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setIsStoreOpen(prev => !prev)}
+                      onClick={async () => {
+                          const newStatus = !isStoreOpen;
+                          setIsStoreOpen(newStatus);
+                          // Salvar no Supabase para que todos os clientes vejam
+                          if (supabase) {
+                            try {
+                              const { error } = await supabase
+                                .from('settings')
+                                .upsert({ key: 'store_open', value: newStatus }, { onConflict: 'key' });
+                              if (error) console.error('Erro ao salvar status da loja:', error);
+                            } catch (e) {
+                              console.warn('Erro ao salvar status da loja no Supabase:', e);
+                            }
+                          }
+                        }}
                       className={`mt-4 w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer ${
                         isStoreOpen 
                           ? 'bg-red-700/80 hover:bg-red-700 text-red-100 border border-red-600/40' 
