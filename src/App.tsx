@@ -37,6 +37,7 @@ interface Product {
   tags: string[];
   category: 'batatas' | 'bebidas' | 'molhos' | 'acompanhamentos';
   active?: boolean;
+  acceptsToppings?: boolean; // Controla se o produto exibe o modal de coberturas
 }
 
 interface CartItem extends Product {
@@ -114,7 +115,8 @@ const INITIAL_PRODUCTS: Product[] = [
     image: 'https://images.unsplash.com/photo-1541288097308-7b8e3f58c4c6?auto=format&fit=crop&q=80&w=400',
     tags: ['Mais Pedida', 'Gourmet'],
     category: 'batatas',
-    active: true
+    active: true,
+    acceptsToppings: true
   },
   {
     id: '2',
@@ -124,7 +126,8 @@ const INITIAL_PRODUCTS: Product[] = [
     image: 'https://images.unsplash.com/photo-1621677243915-fcf476997096?auto=format&fit=crop&q=80&w=400',
     tags: ['Promoção'],
     category: 'batatas',
-    active: true
+    active: true,
+    acceptsToppings: true
   },
   {
     id: '3',
@@ -134,7 +137,8 @@ const INITIAL_PRODUCTS: Product[] = [
     image: 'https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?auto=format&fit=crop&q=80&w=400',
     tags: ['Combo', 'Econômico'],
     category: 'batatas',
-    active: true
+    active: true,
+    acceptsToppings: true
   }
 ];
 
@@ -225,7 +229,8 @@ export default function App() {
     image: 'https://images.unsplash.com/photo-1518977676601-b53f02bad6?auto=format&fit=crop&q=80&w=400',
     tags: [],
     category: 'batatas',
-    active: true
+    active: true,
+    acceptsToppings: true
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -400,7 +405,11 @@ export default function App() {
           image: p.image || '',
           tags: Array.isArray(p.tags) ? p.tags : [],
           category: p.category as any,
-          active: p.active !== undefined ? p.active : true
+          active: p.active !== undefined ? p.active : true,
+          // Fallback: se o campo não existir no banco, usa categoria como critério
+          acceptsToppings: p.accepts_toppings !== undefined && p.accepts_toppings !== null
+            ? Boolean(p.accepts_toppings)
+            : p.category === 'batatas'
         }));
 
         const mappedNeighborhoods: Neighborhood[] = dbNeighborhoods.map((n: any) => ({
@@ -478,19 +487,12 @@ export default function App() {
   };
 
   const handleAddButtonClick = (product: Product) => {
-    // Bloqueia a janela de coberturas para bebidas/refrigerantes, mesmo se a categoria estiver errada
-    const isDrink = product.category === 'bebidas' || 
-                    /(refrigerante|coca|fanta|guaran[aá]|sprite|água|suco|lata|litro|pepsi|kuat)/i.test(product.name);
-    // Impede que o modal de coberturas apareça para lasanha
-    const isLasagna = /lasanha/i.test(product.name);
+    // Usa o campo acceptsToppings para controlar o modal de coberturas por produto
+    const shouldShowToppings = product.acceptsToppings === true && toppings.length > 0;
 
-    if (product.category === 'batatas' && !isDrink && !isLasagna) {
+    if (shouldShowToppings) {
       setCustomizingProduct(product);
-      if (toppings.length > 0) {
-        setSelectedTopping(toppings[0].name);
-      } else {
-        setSelectedTopping('');
-      }
+      setSelectedTopping(toppings[0].name);
     } else {
       addToCart(product);
     }
@@ -762,7 +764,8 @@ export default function App() {
         image: productToAdd.image,
         tags: productToAdd.tags,
         category: productToAdd.category,
-        active: productToAdd.active
+        active: productToAdd.active,
+        accepts_toppings: productToAdd.acceptsToppings ?? false
       });
       if (error) {
         alert('Erro ao salvar produto no banco de dados: ' + error.message);
@@ -779,7 +782,8 @@ export default function App() {
       image: 'https://images.unsplash.com/photo-1518977676601-b53f02bad6?auto=format&fit=crop&q=80&w=400', 
       tags: [],
       category: 'batatas',
-      active: true
+      active: true,
+      acceptsToppings: true
     });
   };
 
@@ -810,7 +814,8 @@ export default function App() {
         image: editingProduct.image,
         tags: editingProduct.tags,
         category: editingProduct.category,
-        active: editingProduct.active
+        active: editingProduct.active,
+        accepts_toppings: editingProduct.acceptsToppings ?? false
       }).eq('id', editingProduct.id);
       
       if (error) {
@@ -2269,6 +2274,27 @@ export default function App() {
                   ></textarea>
                 </div>
 
+                {/* Toggle: Aceita Cobertura */}
+                <div className="flex items-center justify-between p-4 bg-zinc-950 rounded-xl border border-zinc-800">
+                  <div>
+                    <p className="text-sm font-bold text-zinc-100">Aceita Cobertura?</p>
+                    <p className="text-[11px] text-zinc-500 mt-0.5">Exibe o seletor de cobertura ao adicionar ao carrinho</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNewProduct({ ...newProduct, acceptsToppings: !newProduct.acceptsToppings })}
+                    className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none cursor-pointer ${
+                      newProduct.acceptsToppings ? 'bg-orange-600' : 'bg-zinc-700'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                        newProduct.acceptsToppings ? 'translate-x-6' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
                 <div className="pt-4 flex gap-3">
                   <button 
                     type="button"
@@ -2441,6 +2467,27 @@ export default function App() {
                     className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
                     onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
                   ></textarea>
+                </div>
+
+                {/* Toggle: Aceita Cobertura */}
+                <div className="flex items-center justify-between p-4 bg-zinc-950 rounded-xl border border-zinc-800">
+                  <div>
+                    <p className="text-sm font-bold text-zinc-100">Aceita Cobertura?</p>
+                    <p className="text-[11px] text-zinc-500 mt-0.5">Exibe o seletor de cobertura ao adicionar ao carrinho</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingProduct({ ...editingProduct, acceptsToppings: !editingProduct.acceptsToppings })}
+                    className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none cursor-pointer ${
+                      editingProduct.acceptsToppings ? 'bg-orange-600' : 'bg-zinc-700'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                        editingProduct.acceptsToppings ? 'translate-x-6' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
                 </div>
 
                 <div className="pt-4 flex gap-3">
