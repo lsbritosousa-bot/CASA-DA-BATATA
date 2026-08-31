@@ -158,8 +158,9 @@ export default function App() {
   const [cart, setCart] = useState<CartItem[]>([]);
 
   // Estado de status da loja (aberta/fechada)
-  // Valor inicial: true (aberta) — o Supabase será consultado logo após o carregamento
-  const [isStoreOpen, setIsStoreOpen] = useState<boolean>(true);
+  // Valor inicial: null = indeterminado (aguardando Supabase)
+  // true = aberta | false = fechada
+  const [isStoreOpen, setIsStoreOpen] = useState<boolean | null>(null);
   const [currentView, setCurrentView] = useState<View>('menu');
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
@@ -311,10 +312,17 @@ export default function App() {
         try {
           const settingsRes = await supabase.from('settings').select('value').eq('key', 'store_open').single();
           if (!settingsRes.error && settingsRes.data) {
-            setIsStoreOpen(settingsRes.data.value === true || settingsRes.data.value === 'true');
+            const rawValue = settingsRes.data.value;
+            // Comparação robusta: suporta boolean true, string 'true', number 1
+            const storeIsOpen = rawValue === true || rawValue === 'true' || rawValue === 1 || rawValue === '1';
+            setIsStoreOpen(storeIsOpen);
+          } else {
+            // Se não houver configuração no banco, assume aberta
+            setIsStoreOpen(true);
           }
         } catch (e) {
-          console.warn('Erro ao carregar status da loja do Supabase. Mantendo como aberta.', e);
+          console.warn('Erro ao carregar status da loja do Supabase. Assumindo aberta.', e);
+          setIsStoreOpen(true);
         }
 
         try {
@@ -446,10 +454,32 @@ export default function App() {
     loadData();
   }, []);
 
-  // Polling: clientes verificam o status da loja a cada 30 segundos
+  // Realtime: atualização instantânea do status da loja via Supabase Realtime
   useEffect(() => {
     if (!supabase) return;
 
+    // Subscription em tempo real na tabela settings
+    const channel = supabase
+      .channel('store-status-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'settings',
+          filter: 'key=eq.store_open'
+        },
+        (payload: any) => {
+          if (payload.new && payload.new.value !== undefined) {
+            const rawValue = payload.new.value;
+            const storeIsOpen = rawValue === true || rawValue === 'true' || rawValue === 1 || rawValue === '1';
+            setIsStoreOpen(storeIsOpen);
+          }
+        }
+      )
+      .subscribe();
+
+    // Polling de fallback a cada 20 segundos (caso o Realtime falhe)
     const checkStoreStatus = async () => {
       try {
         const { data, error } = await supabase
@@ -458,20 +488,21 @@ export default function App() {
           .eq('key', 'store_open')
           .single();
         if (!error && data) {
-          const open = data.value === true || data.value === 'true';
-          setIsStoreOpen(open);
+          const rawValue = data.value;
+          const storeIsOpen = rawValue === true || rawValue === 'true' || rawValue === 1 || rawValue === '1';
+          setIsStoreOpen(storeIsOpen);
         }
       } catch (e) {
         // Silencioso: falha no polling não deve interromper o app
       }
     };
 
-    // Verifica imediatamente ao montar (caso o loadData ainda não tenha terminado)
-    checkStoreStatus();
+    const interval = setInterval(checkStoreStatus, 20000);
 
-    // Polling a cada 30 segundos
-    const interval = setInterval(checkStoreStatus, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, []);
 
   // Atalho F12 para acessar painel admin
@@ -911,7 +942,8 @@ export default function App() {
 
   // --- Views ---
 
-  if (isLoading) {
+  // Mostra loading enquanto aguarda o Supabase responder com o status real da loja
+  if (isLoading || isStoreOpen === null) {
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-orange-500 relative z-50">
         <ChefHat size={64} className="animate-bounce mb-4 text-orange-500" />
@@ -1039,8 +1071,9 @@ export default function App() {
     </div>
   );
 
-  // Se a loja estiver fechada e o cliente não for admin, mostra tela de fechado
-  if (!isStoreOpen && currentView !== 'admin') {
+  // Se a loja estiver fechada (false) e o cliente não for admin, mostra tela de fechado
+  // isStoreOpen === null já foi tratado acima (loading)
+  if (isStoreOpen === false && currentView !== 'admin') {
     return <ClosedScreen />;
   }
 
@@ -1423,7 +1456,7 @@ export default function App() {
                           <p className="text-xs text-zinc-400">
                             {isStoreOpen 
                               ? 'Clientes podem fazer pedidos agora.'
-                              : 'Clientes veem a tela de fechado.'
+                              : 'Clientes veem a tela de fechado instantaneamente.'
                             }
                           </p>
                         </div>
@@ -1432,17 +1465,22 @@ export default function App() {
                         type="button"
                         onClick={async () => {
                           const newStatus = !isStoreOpen;
-                          setIsStoreOpen(newStatus);
-                          // Salvar no Supabase para que todos os clientes vejam
+                          // Salvar no Supabase PRIMEIRO — o Realtime atualiza o estado local
                           if (supabase) {
                             try {
                               const { error } = await supabase
                                 .from('settings')
                                 .upsert({ key: 'store_open', value: newStatus }, { onConflict: 'key' });
-                              if (error) console.error('Erro ao salvar status da loja:', error);
+                              if (error) {
+                                console.error('Erro ao salvar status da loja:', error);
+                                alert('Erro ao alterar status da loja: ' + error.message);
+                              }
                             } catch (e) {
                               console.warn('Erro ao salvar status da loja no Supabase:', e);
                             }
+                          } else {
+                            // Sem Supabase: atualiza apenas localmente
+                            setIsStoreOpen(newStatus);
                           }
                         }}
                         className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none flex-shrink-0 cursor-pointer ${
@@ -1461,17 +1499,22 @@ export default function App() {
                       type="button"
                       onClick={async () => {
                           const newStatus = !isStoreOpen;
-                          setIsStoreOpen(newStatus);
-                          // Salvar no Supabase para que todos os clientes vejam
+                          // Salvar no Supabase PRIMEIRO — o Realtime atualiza o estado local
                           if (supabase) {
                             try {
                               const { error } = await supabase
                                 .from('settings')
                                 .upsert({ key: 'store_open', value: newStatus }, { onConflict: 'key' });
-                              if (error) console.error('Erro ao salvar status da loja:', error);
+                              if (error) {
+                                console.error('Erro ao salvar status da loja:', error);
+                                alert('Erro ao alterar status da loja: ' + error.message);
+                              }
                             } catch (e) {
                               console.warn('Erro ao salvar status da loja no Supabase:', e);
                             }
+                          } else {
+                            // Sem Supabase: atualiza apenas localmente
+                            setIsStoreOpen(newStatus);
                           }
                         }}
                       className={`mt-4 w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer ${
