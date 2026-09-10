@@ -28,6 +28,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from './lib/supabase';
 
 // --- Types ---
+interface Category {
+  id: string;
+  name: string;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -35,7 +40,7 @@ interface Product {
   price: number;
   image: string;
   tags: string[];
-  category: 'batatas' | 'bebidas' | 'molhos' | 'acompanhamentos';
+  category: string;
   active?: boolean;
   acceptsToppings?: boolean; // Controla se o produto exibe o modal de coberturas
 }
@@ -83,6 +88,14 @@ const INITIAL_CALC_INGREDIENTS: CalcIngredient[] = [
 type View = 'menu' | 'cart' | 'admin';
 
 // --- Initial Data ---
+const INITIAL_CATEGORIES: Category[] = [
+  { id: 'batatas', name: 'Batatas Recheadas 🥔' },
+  { id: 'lasanhas', name: 'Lasanhas 🍝' },
+  { id: 'bebidas', name: 'Refrigerantes 🥤' },
+  { id: 'molhos', name: 'Molhos Artesanais 🍯' },
+  { id: 'acompanhamentos', name: 'Acompanhamentos 🍟' }
+];
+
 const INITIAL_NEIGHBORHOODS: Neighborhood[] = [
   { id: '1', name: 'Açaizal', deliveryFee: 8.00 },
   { id: '2', name: 'Alto do Vale', deliveryFee: 8.00 },
@@ -109,45 +122,93 @@ const INITIAL_NEIGHBORHOODS: Neighborhood[] = [
 const INITIAL_PRODUCTS: Product[] = [
   {
     id: '1',
-    name: 'Batata Bacon Clássica',
-    description: 'Batata assada gigante recheada com muito queijo cremoso, bacon artesanal crocante e cebolinha frita.',
-    price: 32.90,
+    name: 'Batata recheada 500g (bacon)',
+    description: 'Batata assada gigante recheada com muito queijo cremoso, bacon artesanal crocante e cebolinha.',
+    price: 29.00,
     image: 'https://images.unsplash.com/photo-1541288097308-7b8e3f58c4c6?auto=format&fit=crop&q=80&w=400',
-    tags: ['Mais Pedida', 'Gourmet'],
+    tags: ['Gourmet'],
     category: 'batatas',
     active: true,
     acceptsToppings: true
   },
   {
     id: '2',
-    name: 'Batata Calabresa Especial',
-    description: 'Deliciosa calabresa acebolada com cream cheese, batata palha fininha e um toque de orégano.',
-    price: 28.50,
+    name: 'Batata recheada 300g (bacon)',
+    description: 'Batata assada média com queijo cremoso, bacon artesanal e cebolinha.',
+    price: 24.00,
     image: 'https://images.unsplash.com/photo-1621677243915-fcf476997096?auto=format&fit=crop&q=80&w=400',
-    tags: ['Promoção'],
+    tags: [],
     category: 'batatas',
     active: true,
     acceptsToppings: true
   },
   {
     id: '3',
-    name: 'Combo Happy Hour',
-    description: '2 Batatas Médias (Frango c/ Catupiry) + 2 Refrigerantes lata + Batata Chips artesanal.',
-    price: 64.00,
+    name: 'Batata recheada 300g (frango cremoso)',
+    description: 'Batata assada média recheada com frango desfiado suculento e catupiry cremoso.',
+    price: 26.00,
     image: 'https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?auto=format&fit=crop&q=80&w=400',
-    tags: ['Combo', 'Econômico'],
+    tags: [],
     category: 'batatas',
     active: true,
     acceptsToppings: true
+  },
+  {
+    id: '4',
+    name: 'Escondidinho de carne de sol',
+    description: 'Escondidinho de carne de sol, feito com purê bem cremoso e carne de sol desfiada bem temperada, e uma camada de queijo por cima para ficar ainda mais gostoso.',
+    price: 22.00,
+    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=400',
+    tags: [],
+    category: 'lasanhas',
+    active: true,
+    acceptsToppings: false
+  },
+  {
+    id: '5',
+    name: 'Lasanha de frango 500g',
+    description: 'Acompanha uma porção de arroz',
+    price: 25.00,
+    image: 'https://images.unsplash.com/photo-1574894709920-11b28e7367e3?auto=format&fit=crop&q=80&w=400',
+    tags: ['A MAIS PEDIDA'],
+    category: 'lasanhas',
+    active: true,
+    acceptsToppings: false
+  },
+  {
+    id: '6',
+    name: 'Lasanha de carne 500g',
+    description: 'Acompanha uma porção de arroz',
+    price: 27.00,
+    image: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&q=80&w=400',
+    tags: ['A MAIS PEDIDA'],
+    category: 'lasanhas',
+    active: true,
+    acceptsToppings: false
+  },
+  {
+    id: '7',
+    name: 'Fanta uva',
+    description: 'Refrigerante Fanta Uva lata 350ml bem gelada.',
+    price: 6.00,
+    image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&q=80&w=400',
+    tags: [],
+    category: 'bebidas',
+    active: true,
+    acceptsToppings: false
+  },
+  {
+    id: '8',
+    name: 'Fanta Laranja',
+    description: 'Refrigerante Fanta Laranja lata 350ml bem gelada.',
+    price: 6.00,
+    image: 'https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?auto=format&fit=crop&q=80&w=400',
+    tags: [],
+    category: 'bebidas',
+    active: true,
+    acceptsToppings: false
   }
 ];
-
-const CATEGORY_NAMES = {
-  batatas: 'Batatas Recheadas 🥔',
-  bebidas: 'Bebidas 🥤',
-  molhos: 'Molhos Artesanais 🍯',
-  acompanhamentos: 'Acompanhamentos 🍟'
-};
 
 // --- Sub-components ---
 
@@ -167,12 +228,25 @@ export default function App() {
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [imageMethod, setImageMethod] = useState<'upload' | 'url'>('upload');
 
+  // Estados de Categorias
+  const [categories, setCategories] = useState<Category[]>(() => {
+    try {
+      const saved = localStorage.getItem('casa-da-batata-categories');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Erro ao carregar categorias do localStorage', e);
+    }
+    return INITIAL_CATEGORIES;
+  });
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+
   // Estados de Bairros e Taxas de Entrega
   // Sempre reseta os bairros para INITIAL_NEIGHBORHOODS (Paragominas-PA)
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>(() => {
     return INITIAL_NEIGHBORHOODS;
   });
-  const [adminTab, setAdminTab] = useState<'products' | 'delivery' | 'calculator' | 'toppings'>('products');
+  const [adminTab, setAdminTab] = useState<'products' | 'categories' | 'delivery' | 'calculator' | 'toppings'>('products');
   const [newNeighborhoodName, setNewNeighborhoodName] = useState('');
   const [newNeighborhoodFee, setNewNeighborhoodFee] = useState(0);
 
@@ -256,6 +330,15 @@ export default function App() {
       console.warn('Erro ao salvar products no localStorage (Quota excedida?)', e);
     }
   }, [products]);
+
+  // Persist categorias
+  useEffect(() => {
+    try {
+      localStorage.setItem('casa-da-batata-categories', JSON.stringify(categories));
+    } catch (e) {
+      console.warn('Erro ao salvar categorias no localStorage', e);
+    }
+  }, [categories]);
 
   // Persist bairros
   useEffect(() => {
@@ -596,6 +679,65 @@ export default function App() {
         }
       }
     }
+  };
+
+  const handleAddCategory = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+
+    const id = newCategoryName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "-") + '-' + Date.now().toString().slice(-4);
+    const newCat: Category = {
+      id,
+      name: newCategoryName.trim()
+    };
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('categories').insert({
+          id: newCat.id,
+          name: newCat.name
+        });
+        if (error) console.error('Erro ao salvar categoria no Supabase:', error);
+      } catch (e) {
+        console.warn('Erro ao conectar na tabela categories no Supabase:', e);
+      }
+    }
+
+    setCategories(prev => [...prev, newCat]);
+    setNewCategoryName('');
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (window.confirm('Tem certeza que deseja excluir esta categoria? Os produtos associados a ela permanecerão salvos.')) {
+      setCategories(prev => prev.filter(c => c.id !== id));
+      if (supabase) {
+        try {
+          const { error } = await supabase.from('categories').delete().eq('id', id);
+          if (error) console.error('Erro ao excluir categoria no Supabase:', error);
+        } catch (e) {
+          console.warn('Erro ao excluir categoria no Supabase.', e);
+        }
+      }
+    }
+  };
+
+  const handleUpdateCategory = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingCategory || !editingCategory.name.trim()) return;
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('categories').update({
+          name: editingCategory.name.trim()
+        }).eq('id', editingCategory.id);
+        if (error) console.error('Erro ao atualizar categoria no Supabase:', error);
+      } catch (e) {
+        console.warn('Erro ao atualizar categoria no Supabase.', e);
+      }
+    }
+
+    setCategories(prev => prev.map(c => c.id === editingCategory.id ? { ...c, name: editingCategory.name.trim() } : c));
+    setEditingCategory(null);
   };
 
   const subtotal = useMemo(() => cart.reduce((acc, item) => acc + (item.price * item.quantity), 0), [cart]);
@@ -1103,14 +1245,14 @@ export default function App() {
             >
               {/* Product List agrupado por Categoria */}
               <div className="space-y-8">
-                {(['batatas', 'bebidas', 'molhos', 'acompanhamentos'] as const).map(catKey => {
-                  const categoryProducts = products.filter(p => p.active !== false && p.category === catKey);
+                {categories.map(cat => {
+                  const categoryProducts = products.filter(p => p.active !== false && p.category === cat.id);
                   if (categoryProducts.length === 0) return null;
                   
                   return (
-                    <div key={catKey} className="space-y-4">
+                    <div key={cat.id} className="space-y-4">
                       <h3 className="text-xl font-bold text-zinc-100 border-b border-zinc-800 pb-2 mb-4 tracking-tight flex items-center justify-between">
-                        <span>{CATEGORY_NAMES[catKey]}</span>
+                        <span>{cat.name}</span>
                         <span className="text-xs font-normal text-zinc-400 bg-zinc-900 px-2.5 py-0.5 rounded-full border border-zinc-800">
                           {categoryProducts.length} {categoryProducts.length === 1 ? 'item' : 'itens'}
                         </span>
@@ -1125,6 +1267,31 @@ export default function App() {
                     </div>
                   );
                 })}
+
+                {/* Fallback para produtos com categoria personalizada ainda não registrada */}
+                {(() => {
+                  const knownCatIds = new Set(categories.map(c => c.id));
+                  const unclassifiedProducts = products.filter(p => p.active !== false && !knownCatIds.has(p.category));
+                  if (unclassifiedProducts.length === 0) return null;
+
+                  return (
+                    <div className="space-y-4">
+                      <h3 className="text-xl font-bold text-zinc-100 border-b border-zinc-800 pb-2 mb-4 tracking-tight flex items-center justify-between">
+                        <span>Outros Produtos 🍽️</span>
+                        <span className="text-xs font-normal text-zinc-400 bg-zinc-900 px-2.5 py-0.5 rounded-full border border-zinc-800">
+                          {unclassifiedProducts.length} {unclassifiedProducts.length === 1 ? 'item' : 'itens'}
+                        </span>
+                      </h3>
+                      <div className="space-y-4">
+                        {unclassifiedProducts.map(product => (
+                          <div key={product.id}>
+                            <ProductCard product={product} onAdd={() => handleAddButtonClick(product)} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </motion.div>
           )}
@@ -1541,6 +1708,16 @@ export default function App() {
                       Produtos
                     </button>
                     <button
+                      onClick={() => setAdminTab('categories')}
+                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer min-w-[100px] ${
+                        adminTab === 'categories' 
+                          ? 'bg-orange-600 text-white shadow-lg' 
+                          : 'text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      Categorias
+                    </button>
+                    <button
                       onClick={() => setAdminTab('delivery')}
                       className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer min-w-[120px] ${
                         adminTab === 'delivery' 
@@ -1628,6 +1805,87 @@ export default function App() {
                             </div>
                           </div>
                         ))}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {adminTab === 'categories' && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-6"
+                    >
+                      <form onSubmit={handleAddCategory} className="bg-zinc-900/80 backdrop-blur-md p-6 rounded-3xl border border-zinc-800 space-y-4">
+                        <h3 className="font-bold text-zinc-100 text-lg border-b border-zinc-800 pb-2 mb-3">Cadastrar Nova Categoria</h3>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-zinc-400 uppercase block">Nome da Categoria (com emoji opcional)</label>
+                          <div className="flex gap-2">
+                            <input 
+                              required
+                              type="text" 
+                              value={newCategoryName}
+                              onChange={(e) => setNewCategoryName(e.target.value)}
+                              placeholder="Ex: Lasanhas 🍝 ou Sobremesas 🍰"
+                              className="flex-1 px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all placeholder-zinc-600"
+                            />
+                            <button 
+                              type="submit"
+                              className="bg-orange-600 hover:bg-orange-500 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-lg shadow-orange-600/20 flex items-center gap-2 cursor-pointer shrink-0"
+                            >
+                              <Plus size={18} /> Adicionar
+                            </button>
+                          </div>
+                        </div>
+                      </form>
+
+                      <div className="space-y-3">
+                        <h3 className="font-bold text-zinc-400 text-sm uppercase tracking-wider">Categorias Cadastradas ({categories.length})</h3>
+                        <div className="space-y-2">
+                          {categories.map(cat => (
+                            <div key={cat.id} className="bg-zinc-900/80 backdrop-blur-md p-4 rounded-2xl flex items-center justify-between border border-zinc-800">
+                              {editingCategory?.id === cat.id ? (
+                                <form onSubmit={handleUpdateCategory} className="flex-1 flex gap-2 mr-2">
+                                  <input
+                                    type="text"
+                                    value={editingCategory.name}
+                                    onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                                    className="flex-1 px-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm outline-none focus:border-orange-500"
+                                    autoFocus
+                                  />
+                                  <button type="submit" className="px-3 py-1.5 bg-emerald-600 text-white font-bold text-xs rounded-lg hover:bg-emerald-500 cursor-pointer">
+                                    Salvar
+                                  </button>
+                                  <button type="button" onClick={() => setEditingCategory(null)} className="px-3 py-1.5 bg-zinc-800 text-zinc-300 font-bold text-xs rounded-lg hover:bg-zinc-700 cursor-pointer">
+                                    Cancelar
+                                  </button>
+                                </form>
+                              ) : (
+                                <>
+                                  <div>
+                                    <h4 className="font-bold text-zinc-100 text-base">{cat.name}</h4>
+                                    <p className="text-xs text-zinc-500">ID: {cat.id} • {products.filter(p => p.category === cat.id).length} produto(s)</p>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => setEditingCategory(cat)}
+                                      className="p-2 text-zinc-400 hover:text-orange-500 transition-colors cursor-pointer"
+                                      title="Editar Categoria"
+                                    >
+                                      <Edit2 size={18} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteCategory(cat.id)}
+                                      className="p-2 text-zinc-400 hover:text-red-500 transition-colors cursor-pointer"
+                                      title="Excluir Categoria"
+                                    >
+                                      <Trash2 size={18} />
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </motion.div>
                   )}
@@ -2275,14 +2533,15 @@ export default function App() {
                     <label className="text-xs font-bold text-zinc-400 uppercase">Categoria</label>
                     <select 
                       required
-                      className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-                      value={newProduct.category || 'batatas'}
-                      onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value as any })}
+                      className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none cursor-pointer"
+                      value={newProduct.category || categories[0]?.id || 'batatas'}
+                      onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
                     >
-                      <option value="batatas">Batatas Recheadas</option>
-                      <option value="bebidas">Bebidas</option>
-                      <option value="molhos">Molhos</option>
-                      <option value="acompanhamentos">Acompanhamentos</option>
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -2468,14 +2727,15 @@ export default function App() {
                     <label className="text-xs font-bold text-zinc-400 uppercase">Categoria</label>
                     <select 
                       required
-                      className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                      className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none cursor-pointer"
                       value={editingProduct.category}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value as any })}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
                     >
-                      <option value="batatas">Batatas Recheadas</option>
-                      <option value="bebidas">Bebidas</option>
-                      <option value="molhos">Molhos</option>
-                      <option value="acompanhamentos">Acompanhamentos</option>
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
